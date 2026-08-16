@@ -109,8 +109,8 @@
     <label>Damage <input id="damageAmount" inputmode="numeric" type="number" min="0" value="5"></label><button data-command="damage">Apply damage</button>
     <label>Death Save <input id="deathSaveRoll" inputmode="numeric" type="number" min="1" max="10" value="5"></label><button data-command="death-save">Record roll</button>
     <button data-command="critical">Add test critical injury</button><button data-command="stabilise">Stabilise</button>
-    <button data-command="rest">Begin rest</button><button data-command="day">Advance one day</button>
-    <button data-command="reset" class="console-reset">Reset patient</button>
+    <button data-command="treat">Treat critical injury</button><button data-command="rest">Begin rest</button>
+    <button data-command="day">Advance one day</button><button data-command="reset" class="console-reset">Reset patient</button>
   </div>
   <small>Developer harness only. Omit <code>?healthpar=1</code> for the ordinary patient-facing UI.</small>
 </aside>
@@ -118,5 +118,10 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" src="./app.js"></script>
+<script type="module">
+  window.addEventListener('medscan:update', (event) => {
+    if (event.detail) window.MedScanBridge?.load(event.detail);
+  });
+</script>
 </body>
 </html>

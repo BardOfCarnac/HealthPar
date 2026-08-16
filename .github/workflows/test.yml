@@ -2,7 +2,7 @@ name: HealthPar tests
 
 on:
   push:
-    branches: [main, agent/medscan-domain-foundation]
+    branches: [main, agent/medscan-domain-foundation, agent/medscan-anatomy-prototype]
   pull_request:
 
 permissions:

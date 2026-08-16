@@ -22,25 +22,19 @@
         "consciousness": {"enum": ["unknown", "conscious", "unconscious", "incapacitated", "dead"]}
       }
     },
-    "conditions": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/condition"}
-    },
-    "treatments": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/treatment"}
-    },
-    "cyberware": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/cyberware"}
-    },
-    "anatomyMarkers": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/anatomyMarker"}
-    },
-    "knowledge": {
+    "conditions": {"type": "array", "items": {"$ref": "#/$defs/condition"}},
+    "treatments": {"type": "array", "items": {"$ref": "#/$defs/treatment"}},
+    "cyberware": {"type": "array", "items": {"$ref": "#/$defs/cyberware"}},
+    "anatomyMarkers": {"type": "array", "items": {"$ref": "#/$defs/anatomyMarker"}},
+    "knowledge": {"type": "object", "additionalProperties": {"enum": ["known", "unknown", "withheld", "suspected"]}},
+    "rules": {
       "type": "object",
-      "additionalProperties": {"enum": ["known", "unknown", "withheld", "suspected"]}
+      "additionalProperties": false,
+      "required": ["profile", "state"],
+      "properties": {
+        "profile": {"type": "string", "minLength": 1},
+        "state": {"type": "object"}
+      }
     }
   },
   "$defs": {
@@ -52,7 +46,7 @@
         "conditionId": {"type": "string", "minLength": 1},
         "kind": {"enum": ["injury", "critical_injury", "illness", "drug_effect", "implant_complication", "other"]},
         "label": {"type": "string", "minLength": 1},
-        "state": {"enum": ["active", "treated", "healing", "resolved", "suspected"]},
+        "state": {"enum": ["active", "untreated", "quick_fixed", "treated", "healing", "resolved", "suspected"]},
         "severity": {"type": ["number", "string", "null"]},
         "bodyRegion": {"type": ["string", "null"]},
         "firstObservedAt": {"type": "string", "format": "date-time"},
@@ -84,7 +78,7 @@
         "cyberwareId": {"type": "string", "minLength": 1},
         "catalogItemId": {"type": ["string", "null"]},
         "label": {"type": "string", "minLength": 1},
-        "state": {"enum": ["installed", "damaged", "disabled", "removed", "unknown"]},
+        "state": {"enum": ["installed", "operational", "damaged", "disabled", "severed", "removed", "unknown"]},
         "bodyRegion": {"type": ["string", "null"]},
         "installedAt": {"type": ["string", "null"], "format": "date-time"}
       }

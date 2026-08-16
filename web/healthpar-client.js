@@ -20,11 +20,14 @@ const DEFAULT_PRESENTATION = Object.freeze({
 
 const REGION_TO_ZONE = Object.freeze({
   head: 'head', skull: 'head', face: 'head',
-  left_shoulder: 'left_shoulder', left_arm: 'left_shoulder',
-  right_forearm: 'right_forearm', right_arm: 'right_forearm',
-  left_thigh: 'left_thigh', left_leg: 'left_thigh',
-  right_knee: 'right_knee', right_leg: 'right_knee',
-  chest: 'thoracic_back', torso: 'thoracic_back', thorax: 'thoracic_back', thoracic_back: 'thoracic_back',
+  right_eye: 'right_eye', left_eye: 'left_eye', right_orbit: 'right_eye', left_orbit: 'left_eye',
+  left_shoulder: 'left_shoulder', right_shoulder: 'right_shoulder',
+  left_arm: 'left_arm', right_arm: 'right_arm',
+  left_forearm: 'left_forearm', right_forearm: 'right_forearm',
+  left_thigh: 'left_thigh', right_thigh: 'right_thigh',
+  left_knee: 'left_knee', right_knee: 'right_knee',
+  left_leg: 'left_leg', right_leg: 'right_leg',
+  chest: 'chest', torso: 'torso', thorax: 'chest', thoracic_back: 'thoracic_back',
 });
 
 function clone(value) { return structuredClone(value); }
@@ -65,7 +68,23 @@ function rulesFindings(state) {
       ruleRef: injury.injuryId,
       summary: injury.state === 'quick_fixed'
         ? 'Quick Fixed. The canonical Critical Injury remains in HealthPar until definitive treatment resolves it.'
-        : 'Canonical Critical Injury projected from HealthPar. The body map is display only.',
+        : 'Canonical Critical Injury projected from HealthPar. The anatomy viewer is presentation only.',
+    }));
+}
+
+function cyberwareFindings(state) {
+  return state.cyberware
+    .filter((item) => item.state !== 'removed')
+    .map((item) => ({
+      id: `cyberware_${item.cyberwareId}`,
+      zone: REGION_TO_ZONE[item.bodyRegion] ?? 'torso',
+      title: item.label,
+      severity: item.state === 'operational' ? 'stable' : 'moderate',
+      source: 'cyberware',
+      cyberwareRef: item.cyberwareId,
+      summary: item.state === 'operational'
+        ? 'Canonical installed cyberware projected from HealthPar.'
+        : `Canonical cyberware state: ${cap(item.state)}.`,
     }));
 }
 
@@ -76,7 +95,7 @@ export function mergePresentation(snapshot, state, events, presentation = DEFAUL
   next.coverage = clone(presentation.coverage);
   next.location = clone(presentation.location);
   next.telemetry = clone(presentation.telemetry);
-  next.bodyMap = { findings: [...clone(presentation.sensorFindings ?? []), ...rulesFindings(state)] };
+  next.bodyMap = { findings: [...clone(presentation.sensorFindings ?? []), ...rulesFindings(state), ...cyberwareFindings(state)] };
   next.response = clone(presentation.response);
   next.history = eventHistory(events);
   return next;

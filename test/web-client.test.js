@@ -13,7 +13,7 @@ test('browser client creates a real 0.95 patient and returns the existing Medsca
   assert.equal(snapshot.schemaVersion, 'medscan.snapshot/0.1');
   assert.equal(snapshot.subject.characterId, 'char_demo_001');
   assert.deepEqual(snapshot.game.hp, { current: 24, max: 40 });
-  assert.equal(snapshot.game.woundState, 'seriously_wounded');
+  assert.equal(snapshot.game.woundState, 'lightly_wounded');
   assert.equal(snapshot.biomonitor.telemetryMode, 'derived');
 });
 

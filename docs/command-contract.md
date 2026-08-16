@@ -2,13 +2,11 @@
 
 ## Why commands exist
 
-Clients should express **intent** and let HealthPar decide which authoritative events follow. This prevents the Medscan UI, Sightkick, GM tools, imports, and future clients from each implementing their own version of the medical rules.
+Clients express **intent** and let HealthPar decide which authoritative events follow. This prevents Medscan, Sightkick, GM tools, imports, and future clients from implementing separate versions of the medical rules.
 
 A command is not persisted as medical truth. Accepted commands emit one or more immutable medical events; rejected commands emit none.
 
 ## Common envelope
-
-Every command should contain:
 
 ```json
 {
@@ -24,67 +22,41 @@ Every command should contain:
 }
 ```
 
-`expectedRevision` provides optimistic concurrency. If the record has moved on, the caller reloads/rebases rather than silently overwriting another device's action.
+`expectedRevision` is optimistic concurrency. A stale command is rejected without partial application so the caller can reload/rebase instead of silently overwriting another device's action.
 
-## Initial command vocabulary
+## Generic command vocabulary
 
-### `create_record`
+The generic HealthPar model reserves commands such as `create_record`, `apply_damage`, condition CRUD, treatment attempts, stabilization/consciousness changes, healing/recovery, cyberware changes, anatomy-marker changes, notes, and corrections.
 
-Creates a medical record linked to an external character identity and continuity.
+Rules profiles may expose more precise commands while retaining the same envelope and immutable-event result.
 
-### `apply_damage`
+## Medscan Live 0.95 commands
 
-Requests that the active rules adapter process damage. The payload contains only the inputs required by the rules engine; resulting HP/state/condition changes are emitted as events.
+The executable 0.95 adapter currently accepts:
 
-The UI must not authoritatively subtract hit points itself.
+- `create_record` — create the rules state with BODY/WILL, optional independent baseline overrides, current HP, and Humanity baseline.
+- `set_baselines` — change BODY/WILL and/or any independent Maximum HP, Seriously Wounded threshold, or Death Save override.
+- `apply_damage` — apply HP damage; damage interrupts recovery/stabilization and, if already Mortally Wounded, flags that another Critical Injury must be supplied rather than inventing one.
+- `add_critical_injury` — attach a structured Critical Injury definition/instance, including Death Save modifier, Care routes, anatomy and optional linked cyberware consequences.
+- `roll_death_save` — record the caller-supplied physical d10 result against the current derived target.
+- `attempt_stabilisation` — record Care and, on success, stabilize the patient according to the profile.
+- `attempt_treatment` — record Quick Fix or definitive Treatment against an injury; linked cyberlimb Care can route through Cybertech.
+- `set_resting` — start/stop ordinary recovery when the state permits it.
+- `set_clock_mode` — switch the medical clock between `paused` and `live`.
+- `advance_time` — deterministically advance by combat round, minute, ten minutes, hour, day, or an explicit duration.
+- `add_timed_effect` / `acknowledge_timed_effect` — create and acknowledge timed medical/drug effects. Expiry itself is emitted when medical time advances past the effect.
+- `record_drug_secondary_check` — record a known-drug secondary check and create/worsen persistent addiction on failure when defined.
+- `administer_pharmaceutical` — record provider, route, qualification, notes, outcome, and any resolved HP/timed-effect result.
+- `apply_humanity_loss` — record a direct Humanity change where a source requires it.
+- `therapy` — record Humanity or Addiction Therapy and its resolved result.
+- `install_cyberware` / `set_cyberware_state` / `remove_cyberware` — maintain operational state, Humanity ceiling impact, actual installation loss, live modifiers, and trauma-linked lifecycle.
+- `set_cryotech` — record `none`, `cryopump`, or `cryotank` plus provider/equipment metadata.
 
-### `add_condition`
-
-Adds a condition that did not originate from an automated damage calculation, for example a GM-entered or imported condition.
-
-### `update_condition`
-
-Changes the projected state or metadata of an existing condition.
-
-### `resolve_condition`
-
-Marks a condition resolved without deleting its earlier history.
-
-### `attempt_treatment`
-
-Passes treatment inputs to the active rules adapter. A single command can produce several events, for example `treatment_attempted`, `treatment_outcome_recorded`, `condition_updated`, and `stabilisation_changed`.
-
-### `set_stabilisation`
-
-Records an explicit stabilisation change when permitted by the rules adapter or GM authority.
-
-### `set_consciousness`
-
-Records a consciousness/incapacitation state change.
-
-### `advance_healing`
-
-Advances healing by the requested game-time interval. The rules adapter determines the resulting state changes.
-
-### `install_cyberware` / `update_cyberware` / `remove_cyberware`
-
-Maintains medically relevant installed hardware. `catalogItemId` may later reference Catalogger rather than duplicating item data inside HealthPar.
-
-### `add_anatomy_marker` / `update_anatomy_marker` / `remove_anatomy_marker`
-
-Changes the annotation projection. Marker positions remain normalized and artwork-independent.
-
-### `add_note`
-
-Adds a clinical/GM note. Visibility policy should be attached separately rather than encoded in free text.
-
-### `apply_correction`
-
-Creates a compensating event that corrects an earlier mistake. Historical events are never mutated or deleted by ordinary application behaviour.
+The 0.95 implementation deliberately keeps Critical Injury table prose/data outside the engine. Structured injury definitions can be supplied by a rules-data package or caller, while HealthPar owns their state transitions.
 
 ## Result envelope
 
-Accepted commands should return the resulting revision, events, and projected state in one response so the client can update immediately:
+Accepted commands return the resulting revision, events and projected state together:
 
 ```json
 {
@@ -97,7 +69,7 @@ Accepted commands should return the resulting revision, events, and projected st
 }
 ```
 
-Rejected commands should be machine-readable and must not partially apply:
+Rejected commands are machine-readable and must not partially apply:
 
 ```json
 {
@@ -113,12 +85,13 @@ Rejected commands should be machine-readable and must not partially apply:
 
 ## Rules adapter boundary
 
-The command layer should depend on a small adapter interface rather than on UI code or a particular ruleset implementation. The adapter is responsible for:
+The adapter owns:
 
-- validation of rules-specific inputs;
-- calculating mechanical outcomes;
-- emitting domain events;
-- maintaining deterministic results where the rules require them;
-- exposing enough metadata for the UI to explain what happened without reproducing rulebook text unnecessarily.
+- rules-specific input validation;
+- mechanical outcomes;
+- domain-event emission;
+- deterministic projection;
+- profile-specific state; and
+- enough structured metadata for a client to explain what happened without reproducing rulebook prose.
 
-HealthPar can therefore support the 0.95 system now and additional rules profiles later without changing the persisted medical-record format.
+The UI owns presentation only. `toMedscanSnapshot()` is the compatibility boundary for the current Medscan UI; it exposes the canonical gameplay health subset without making decorative biomonitor/body-map values authoritative.

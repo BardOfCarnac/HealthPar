@@ -1,0 +1,130 @@
+[
+  {
+    "eventId": "evt_0001",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 1,
+    "occurredAt": "2045-08-16T13:55:00Z",
+    "recordedAt": "2045-08-16T13:55:00Z",
+    "actorId": null,
+    "source": "system",
+    "type": "record_created",
+    "causedByEventId": null,
+    "correlationId": "cmd_create_001",
+    "payload": {}
+  },
+  {
+    "eventId": "evt_0002",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 2,
+    "occurredAt": "2045-08-16T14:03:00Z",
+    "recordedAt": "2045-08-16T14:03:01Z",
+    "actorId": "char_demo_001",
+    "source": "rules_engine",
+    "type": "damage_sustained",
+    "causedByEventId": null,
+    "correlationId": "cmd_damage_001",
+    "payload": {
+      "previousHitPoints": 32,
+      "currentHitPoints": 21,
+      "amount": 11
+    }
+  },
+  {
+    "eventId": "evt_0003",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 3,
+    "occurredAt": "2045-08-16T14:03:00Z",
+    "recordedAt": "2045-08-16T14:03:01Z",
+    "actorId": "char_demo_001",
+    "source": "rules_engine",
+    "type": "condition_added",
+    "causedByEventId": "evt_0002",
+    "correlationId": "cmd_damage_001",
+    "payload": {
+      "conditionId": "cond_right_arm_001",
+      "kind": "critical_injury",
+      "label": "Right arm injury",
+      "state": "active",
+      "bodyRegion": "right_arm"
+    }
+  },
+  {
+    "eventId": "evt_0004",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 4,
+    "occurredAt": "2045-08-16T14:08:00Z",
+    "recordedAt": "2045-08-16T14:08:00Z",
+    "actorId": "char_medic_001",
+    "source": "medscan",
+    "type": "treatment_attempted",
+    "causedByEventId": null,
+    "correlationId": "cmd_treatment_001",
+    "payload": {
+      "treatmentId": "treat_001",
+      "conditionId": "cond_right_arm_001",
+      "label": "Emergency treatment"
+    }
+  },
+  {
+    "eventId": "evt_0005",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 5,
+    "occurredAt": "2045-08-16T14:12:00Z",
+    "recordedAt": "2045-08-16T14:12:00Z",
+    "actorId": "char_medic_001",
+    "source": "rules_engine",
+    "type": "treatment_outcome_recorded",
+    "causedByEventId": "evt_0004",
+    "correlationId": "cmd_treatment_001",
+    "payload": {
+      "treatmentId": "treat_001",
+      "outcome": "success"
+    }
+  },
+  {
+    "eventId": "evt_0006",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 6,
+    "occurredAt": "2045-08-16T14:12:00Z",
+    "recordedAt": "2045-08-16T14:12:00Z",
+    "actorId": "char_medic_001",
+    "source": "rules_engine",
+    "type": "condition_updated",
+    "causedByEventId": "evt_0005",
+    "correlationId": "cmd_treatment_001",
+    "payload": {
+      "conditionId": "cond_right_arm_001",
+      "state": "treated"
+    }
+  },
+  {
+    "eventId": "evt_0007",
+    "recordId": "rec_demo_001",
+    "characterId": "char_demo_001",
+    "continuityId": "world_demo",
+    "sequence": 7,
+    "occurredAt": "2045-08-16T14:12:00Z",
+    "recordedAt": "2045-08-16T14:12:00Z",
+    "actorId": "char_medic_001",
+    "source": "rules_engine",
+    "type": "stabilisation_changed",
+    "causedByEventId": "evt_0005",
+    "correlationId": "cmd_treatment_001",
+    "payload": {
+      "previous": "unstable",
+      "current": "stable"
+    }
+  }
+]

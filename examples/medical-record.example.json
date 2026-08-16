@@ -1,0 +1,78 @@
+{
+  "recordId": "rec_demo_001",
+  "characterId": "char_demo_001",
+  "continuityId": "world_demo",
+  "revision": 7,
+  "projectedAt": "2045-08-16T14:12:00Z",
+  "status": {
+    "hitPoints": 21,
+    "maxHitPoints": 40,
+    "stabilisation": "stable",
+    "consciousness": "conscious"
+  },
+  "conditions": [
+    {
+      "conditionId": "cond_right_arm_001",
+      "kind": "critical_injury",
+      "label": "Right arm injury",
+      "state": "treated",
+      "severity": "major",
+      "bodyRegion": "right_arm",
+      "firstObservedAt": "2045-08-16T14:03:00Z",
+      "resolvedAt": null,
+      "sourceEventId": "evt_0003",
+      "rulesRef": "critical-injury-example",
+      "notes": []
+    }
+  ],
+  "treatments": [
+    {
+      "treatmentId": "treat_001",
+      "label": "Emergency treatment",
+      "state": "completed",
+      "conditionId": "cond_right_arm_001",
+      "startedAt": "2045-08-16T14:08:00Z",
+      "endedAt": "2045-08-16T14:12:00Z",
+      "practitionerId": "char_medic_001"
+    }
+  ],
+  "cyberware": [
+    {
+      "cyberwareId": "cyber_left_eye_001",
+      "catalogItemId": null,
+      "label": "Left ocular implant",
+      "state": "installed",
+      "bodyRegion": "left_eye",
+      "installedAt": null
+    }
+  ],
+  "anatomyMarkers": [
+    {
+      "anatomyMarkerId": "marker_arm_001",
+      "view": "anterior",
+      "x": 0.18,
+      "y": 0.42,
+      "depth": 0.25,
+      "layer": "skeletal",
+      "bodyRegion": "right_arm",
+      "conditionId": "cond_right_arm_001",
+      "cyberwareId": null
+    },
+    {
+      "anatomyMarkerId": "marker_eye_001",
+      "view": "anterior",
+      "x": 0.53,
+      "y": 0.08,
+      "depth": 0.1,
+      "layer": "cyberware",
+      "bodyRegion": "left_eye",
+      "conditionId": null,
+      "cyberwareId": "cyber_left_eye_001"
+    }
+  ],
+  "knowledge": {
+    "conditions": "known",
+    "treatments": "known",
+    "cyberware": "suspected"
+  }
+}

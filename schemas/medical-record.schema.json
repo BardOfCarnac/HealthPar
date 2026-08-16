@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthpar.radian.invalid/schemas/medical-record.schema.json",
+  "title": "HealthPar Medical Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["recordId", "characterId", "continuityId", "revision", "projectedAt", "status", "conditions", "treatments", "cyberware", "anatomyMarkers"],
+  "properties": {
+    "recordId": {"type": "string", "minLength": 1},
+    "characterId": {"type": "string", "minLength": 1},
+    "continuityId": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 0},
+    "projectedAt": {"type": "string", "format": "date-time"},
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stabilisation"],
+      "properties": {
+        "hitPoints": {"type": ["number", "null"]},
+        "maxHitPoints": {"type": ["number", "null"]},
+        "stabilisation": {"enum": ["unknown", "unstable", "stable", "not_applicable"]},
+        "consciousness": {"enum": ["unknown", "conscious", "unconscious", "incapacitated", "dead"]}
+      }
+    },
+    "conditions": {"type": "array", "items": {"$ref": "#/$defs/condition"}},
+    "treatments": {"type": "array", "items": {"$ref": "#/$defs/treatment"}},
+    "cyberware": {"type": "array", "items": {"$ref": "#/$defs/cyberware"}},
+    "anatomyMarkers": {"type": "array", "items": {"$ref": "#/$defs/anatomyMarker"}},
+    "knowledge": {"type": "object", "additionalProperties": {"enum": ["known", "unknown", "withheld", "suspected"]}},
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "state"],
+      "properties": {
+        "profile": {"type": "string", "minLength": 1},
+        "state": {"type": "object"}
+      }
+    }
+  },
+  "$defs": {
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conditionId", "kind", "label", "state", "firstObservedAt"],
+      "properties": {
+        "conditionId": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["injury", "critical_injury", "illness", "drug_effect", "implant_complication", "other"]},
+        "label": {"type": "string", "minLength": 1},
+        "state": {"enum": ["active", "untreated", "quick_fixed", "treated", "healing", "resolved", "suspected"]},
+        "severity": {"type": ["number", "string", "null"]},
+        "bodyRegion": {"type": ["string", "null"]},
+        "firstObservedAt": {"type": "string", "format": "date-time"},
+        "resolvedAt": {"type": ["string", "null"], "format": "date-time"},
+        "sourceEventId": {"type": ["string", "null"]},
+        "rulesRef": {"type": ["string", "null"]},
+        "notes": {"type": "array", "items": {"type": "string"}, "default": []}
+      }
+    },
+    "treatment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["treatmentId", "label", "state", "startedAt"],
+      "properties": {
+        "treatmentId": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "state": {"enum": ["planned", "attempted", "active", "completed", "failed", "cancelled"]},
+        "conditionId": {"type": ["string", "null"]},
+        "startedAt": {"type": "string", "format": "date-time"},
+        "endedAt": {"type": ["string", "null"], "format": "date-time"},
+        "practitionerId": {"type": ["string", "null"]}
+      }
+    },
+    "cyberware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cyberwareId", "label", "state"],
+      "properties": {
+        "cyberwareId": {"type": "string", "minLength": 1},
+        "catalogItemId": {"type": ["string", "null"]},
+        "label": {"type": "string", "minLength": 1},
+        "state": {"enum": ["installed", "operational", "damaged", "disabled", "severed", "removed", "unknown"]},
+        "bodyRegion": {"type": ["string", "null"]},
+        "installedAt": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "anatomyMarker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anatomyMarkerId", "view", "x", "y", "layer", "bodyRegion"],
+      "properties": {
+        "anatomyMarkerId": {"type": "string", "minLength": 1},
+        "view": {"enum": ["anterior", "posterior", "left_lateral", "right_lateral", "custom"]},
+        "x": {"type": "number", "minimum": 0, "maximum": 1},
+        "y": {"type": "number", "minimum": 0, "maximum": 1},
+        "depth": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "layer": {"enum": ["exterior", "skeletal", "vascular", "cyberware", "annotation", "custom"]},
+        "bodyRegion": {"type": "string", "minLength": 1},
+        "conditionId": {"type": ["string", "null"]},
+        "cyberwareId": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

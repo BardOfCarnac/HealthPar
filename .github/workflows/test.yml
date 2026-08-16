@@ -17,3 +17,8 @@ jobs:
         with:
           node-version: 20
       - run: npm test
+      - run: node --check web/app.js
+      - run: node --check web/healthpar-client.js
+      - run: node --check web/anatomy-anchors.js
+      - run: node --check web/anatomy-bootstrap.js
+      - run: node --check web/anatomy-viewer.js

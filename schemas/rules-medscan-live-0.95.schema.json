@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthpar.radian.invalid/schemas/rules-medscan-live-0.95.schema.json",
+  "title": "HealthPar Medscan Live 0.95 Rules Projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stats", "overrides", "baselines", "woundState", "deathSave", "recovery", "medicalTimeSeconds", "clockMode", "timedEffects", "humanity", "addictions", "cryotech", "psych"],
+  "properties": {
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body", "will"],
+      "properties": {
+        "body": {"type": "integer", "minimum": 1},
+        "will": {"type": "integer", "minimum": 1}
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxHitPoints", "seriouslyWoundedThreshold", "deathSave"],
+      "properties": {
+        "maxHitPoints": {"type": ["integer", "null"], "minimum": 1},
+        "seriouslyWoundedThreshold": {"type": ["integer", "null"], "minimum": 1},
+        "deathSave": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "baselines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxHitPoints", "seriouslyWoundedThreshold", "deathSave"],
+      "properties": {
+        "maxHitPoints": {"type": "integer", "minimum": 1},
+        "seriouslyWoundedThreshold": {"type": "integer", "minimum": 1},
+        "deathSave": {"type": "integer", "minimum": 1}
+      }
+    },
+    "woundState": {"enum": ["healthy", "lightly_wounded", "seriously_wounded", "mortally_wounded", "dead"]},
+    "deathSave": {
+      "type": "object",
+      "required": ["active", "base", "modifiers", "modifierTotal", "cumulativePenalty", "target", "additionalCriticalInjuryRequired"],
+      "properties": {
+        "active": {"type": "boolean"},
+        "base": {"type": "integer"},
+        "modifiers": {"type": "object"},
+        "modifierTotal": {"type": "integer"},
+        "cumulativePenalty": {"type": "integer", "minimum": 0},
+        "target": {"type": "integer"},
+        "lastRoll": {"type": ["integer", "null"]},
+        "lastOutcome": {"type": ["string", "null"]},
+        "additionalCriticalInjuryRequired": {"type": "boolean"}
+      }
+    },
+    "recovery": {"type": "object"},
+    "medicalTimeSeconds": {"type": "integer", "minimum": 0},
+    "clockMode": {"enum": ["paused", "live"]},
+    "timedEffects": {"type": "array", "items": {"type": "object"}},
+    "humanity": {"type": "object"},
+    "addictions": {"type": "array", "items": {"type": "object"}},
+    "cryotech": {"type": "object"},
+    "psych": {"type": "object"}
+  }
+}

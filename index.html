@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f3f0e8" />
+  <title>Medscan Live — Anatomy Prototype</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div>
+          <div class="eyebrow">Radian Clinical Systems</div>
+          <h1>MEDSCAN <span>LIVE</span></h1>
+        </div>
+      </div>
+      <div class="session-chip">
+        <span class="session-dot" aria-hidden="true"></span>
+        <span>LIVE PATIENT</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="patient-rail" aria-label="Patient summary">
+        <div class="section-kicker">PATIENT</div>
+        <div class="patient-name">A. MARTINEZ</div>
+        <div class="patient-id">TIN // NC-84-0197</div>
+
+        <div class="status-card stable">
+          <span class="status-label">STATUS</span>
+          <strong>STABLE</strong>
+          <span class="status-pulse" aria-hidden="true"></span>
+        </div>
+
+        <dl class="vitals-grid">
+          <div><dt>HR</dt><dd>92</dd></div>
+          <div><dt>BP</dt><dd>118/74</dd></div>
+          <div><dt>SpO₂</dt><dd>98%</dd></div>
+          <div><dt>TEMP</dt><dd>37.1</dd></div>
+        </dl>
+
+        <div class="rail-note">
+          <span>ACTIVE FINDINGS</span>
+          <strong>01 injury · 01 implant</strong>
+        </div>
+      </section>
+
+      <section class="scanner-card" aria-label="Anatomy scan">
+        <div class="scanner-head">
+          <div>
+            <div class="section-kicker">SCAN MODE</div>
+            <div id="scan-mode-title" class="scan-mode-title">SKELETAL</div>
+          </div>
+          <button id="flip-view" class="utility-button" type="button" aria-label="Flip between front and rear view">
+            <span id="view-label">FRONT</span>
+            <span class="flip-icon" aria-hidden="true">↺</span>
+          </button>
+        </div>
+
+        <div id="canvas-container" class="scan-viewport">
+          <div class="scan-grid" aria-hidden="true"></div>
+          <div class="corner corner-tl" aria-hidden="true"></div>
+          <div class="corner corner-tr" aria-hidden="true"></div>
+          <div class="corner corner-bl" aria-hidden="true"></div>
+          <div class="corner corner-br" aria-hidden="true"></div>
+          <div class="scanline" aria-hidden="true"></div>
+
+          <div class="viewport-meta top-left">
+            <span>ANATOMICAL RESOLUTION</span>
+            <strong id="structure-count">—</strong>
+          </div>
+          <div class="viewport-meta top-right">
+            <span>TRACKING</span>
+            <strong>LOCKED</strong>
+          </div>
+
+          <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <div id="loading-text">INITIALISING SKELETAL SCAN…</div>
+          </div>
+
+          <div id="tooltip" class="tooltip" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="scanner-foot">
+          <div class="scan-help">Drag gently to examine · tap anatomy or a marker</div>
+          <button id="reset-view" class="text-button" type="button">RESET VIEW</button>
+        </div>
+      </section>
+
+      <aside class="detail-rail" aria-live="polite">
+        <div class="section-kicker">SELECTED</div>
+        <div id="detail-kind" class="detail-kind">CLINICAL FINDING</div>
+        <h2 id="detail-title">LEFT RADIUS</h2>
+        <div id="detail-subtitle" class="detail-subtitle">Fracture · Moderate</div>
+
+        <div id="detail-body" class="detail-body">
+          <div class="finding-row critical">
+            <span>TRAUMA</span>
+            <strong>FRACTURE</strong>
+          </div>
+          <div class="finding-row">
+            <span>STATE</span>
+            <strong>UNTREATED</strong>
+          </div>
+          <div class="finding-row">
+            <span>VASCULAR</span>
+            <strong>NO MAJOR COMPROMISE</strong>
+          </div>
+        </div>
+
+        <div class="marker-legend">
+          <button class="legend-item injury" type="button" data-clinical-marker="fracture">
+            <span class="legend-dot"></span>
+            <span><strong>Injury marker</strong><small>Left radius fracture</small></span>
+          </button>
+          <button class="legend-item implant" type="button" data-clinical-marker="implant">
+            <span class="legend-dot"></span>
+            <span><strong>Cyberware marker</strong><small>Right optical implant</small></span>
+          </button>
+        </div>
+      </aside>
+    </main>
+
+    <nav class="mode-bar" aria-label="Scan modes">
+      <button class="mode-button active" type="button" data-mode="skeletal">
+        <span class="mode-index">01</span><span class="mode-name">SKELETAL</span>
+      </button>
+      <button class="mode-button" type="button" data-mode="internal">
+        <span class="mode-index">02</span><span class="mode-name">INTERNAL</span>
+      </button>
+      <button class="mode-button" type="button" data-mode="vascular">
+        <span class="mode-index">03</span><span class="mode-name">VASCULAR</span>
+      </button>
+      <button class="mode-button" type="button" data-mode="neural">
+        <span class="mode-index">04</span><span class="mode-name">NEURAL</span>
+      </button>
+    </nav>
+
+    <footer class="attribution">
+      Anatomy data: BodyParts3D / Z-Anatomy, adapted for web by Anatomi Simülatörü · CC BY-SA 4.0.
+      <a href="./ATTRIBUTION.md">Attribution</a>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

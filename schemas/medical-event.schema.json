@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthpar.radian.invalid/schemas/medical-event.schema.json",
+  "title": "HealthPar Medical Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "recordId", "characterId", "continuityId", "sequence", "occurredAt", "recordedAt", "type", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "minLength": 1},
+    "recordId": {"type": "string", "minLength": 1},
+    "characterId": {"type": "string", "minLength": 1},
+    "continuityId": {"type": "string", "minLength": 1},
+    "sequence": {"type": "integer", "minimum": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "recordedAt": {"type": "string", "format": "date-time"},
+    "actorId": {"type": ["string", "null"]},
+    "source": {"enum": ["rules_engine", "medscan", "gm", "import", "system", "other"]},
+    "type": {
+      "enum": [
+        "record_created",
+        "damage_sustained",
+        "condition_added",
+        "condition_updated",
+        "condition_resolved",
+        "treatment_attempted",
+        "treatment_outcome_recorded",
+        "stabilisation_changed",
+        "consciousness_changed",
+        "healing_advanced",
+        "cyberware_installed",
+        "cyberware_updated",
+        "cyberware_removed",
+        "anatomy_marker_added",
+        "anatomy_marker_updated",
+        "anatomy_marker_removed",
+        "note_added",
+        "correction_applied"
+      ]
+    },
+    "causedByEventId": {"type": ["string", "null"]},
+    "correlationId": {"type": ["string", "null"]},
+    "payload": {"type": "object"}
+  }
+}

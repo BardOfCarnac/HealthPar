@@ -1,5 +1,10 @@
 import { MedscanAnatomyViewer } from './anatomy-viewer.js';
 
+const style = document.createElement('link');
+style.rel = 'stylesheet';
+style.href = './anatomy.css';
+document.head.appendChild(style);
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 

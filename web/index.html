@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fbf8ef">
+<title>MedScan Live — HealthPar connected</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app">
+<header class="masthead">
+  <div class="mark" aria-hidden="true"><i class="m1"></i><i class="m2"></i><i class="m3"></i></div>
+  <div class="brand"><div class="brand-name">MEDSCAN <span>LIVE</span></div><div class="brand-sub">Trauma Team International · connected medical service</div></div>
+  <div class="head-status"><div class="pill coverage"><b id="headPlan">—</b> coverage</div><div class="pill live">biomonitor live</div></div>
+</header>
+
+<main>
+<section class="view" id="overview">
+  <article class="card hero"><div class="eyebrow">Current patient state</div><h1 id="overviewState">YOU ARE <span>CONNECTED</span></h1><p id="overviewCopy"></p></article>
+  <div class="quick-grid">
+    <article class="card quick" data-jump="bodymap"><div class="eyebrow">Current scan</div><strong id="quickFindings">—</strong><small>Open body map →</small></article>
+    <article class="card quick" data-jump="vitals"><div class="eyebrow">Vitals</div><strong id="quickVitals">—</strong><small>Open biomonitor →</small></article>
+    <article class="card quick" data-jump="history"><div class="eyebrow">Medical record</div><strong id="quickHistory">—</strong><small>Review history →</small></article>
+  </div>
+</section>
+
+<section class="view active" id="bodymap">
+  <div class="identity">
+    <article class="strip patient"><div class="avatar"></div><div><div class="eyebrow">Patient ID</div><div class="primary" id="patientId">—</div><div class="secondary" id="patientSecondary">—</div></div></article>
+    <article class="strip"><div><div class="eyebrow">Biomonitor</div><div class="primary good" id="bioState">—</div><div class="secondary" id="bioSignal">—</div></div><div class="signal">▂▄▆█</div></article>
+    <article class="strip"><div><div class="eyebrow">Contract</div><div class="primary" id="planName">—</div><div class="secondary" id="coverageSecondary">—</div></div><span class="active-tag" id="coverageTag">—</span></article>
+  </div>
+
+  <div class="body-layout">
+    <article class="card body-card">
+      <div class="section-head"><h2>Body map</h2><p>Tap a marked zone</p></div>
+      <div class="scan-stage">
+        <svg class="body-svg" viewBox="0 0 260 520" aria-label="Medical body map">
+          <g id="frontBody">
+            <ellipse class="body-base" cx="130" cy="50" rx="31" ry="39"/>
+            <path class="body-base" d="M104 86 C83 95 70 117 69 153 L73 228 55 331 74 338 95 249 104 219 104 298 90 474 119 480 129 330 140 480 170 474 156 298 156 219 165 249 186 338 205 331 187 228 191 153 C190 117 177 95 156 86 Z"/>
+            <path class="body-detail" d="M130 89v232M91 127c20 14 59 14 78 0M103 183c15 11 39 11 54 0M105 253c11 7 39 7 51 0M119 480v-147M140 480V333"/>
+            <ellipse class="zone red" data-zone="head" cx="151" cy="39" rx="11" ry="9"/>
+            <ellipse class="zone red" data-zone="left_shoulder" cx="92" cy="111" rx="18" ry="17"/>
+            <ellipse class="zone amber" data-zone="right_forearm" cx="178" cy="227" rx="13" ry="26"/>
+            <ellipse class="zone red" data-zone="left_thigh" cx="112" cy="344" rx="17" ry="43"/>
+            <ellipse class="zone yellow" data-zone="right_knee" cx="150" cy="402" rx="13" ry="18"/>
+          </g>
+          <g id="backBody" hidden>
+            <ellipse class="body-base" cx="130" cy="50" rx="31" ry="39"/>
+            <path class="body-base" d="M104 86 C83 95 70 117 69 153 L73 228 55 331 74 338 95 249 104 219 104 298 90 474 119 480 129 330 140 480 170 474 156 298 156 219 165 249 186 338 205 331 187 228 191 153 C190 117 177 95 156 86 Z"/>
+            <path class="body-detail" d="M130 89v232M88 126c24-13 59-13 84 0M104 189c18-11 34-11 52 0M118 480l11-147M141 480l-11-147"/>
+            <ellipse class="zone yellow" data-zone="thoracic_back" cx="132" cy="168" rx="24" ry="34"/>
+          </g>
+        </svg>
+        <div class="selected-chip"><strong id="chipTitle">—</strong><span id="chipMeta">—</span></div>
+        <div class="map-legend"><span><i class="dot red-dot"></i>critical / rules-linked</span><span><i class="dot amber-dot"></i>sensor</span></div>
+        <div class="view-toggle"><button class="active" data-bodyview="front">Front</button><button data-bodyview="back">Back</button></div>
+      </div>
+    </article>
+
+    <aside class="side-stack">
+      <article class="card side-card"><div class="eyebrow">Selected finding</div><div class="severity" id="severity">—</div><div class="detail-title" id="detailTitle">—</div><div class="detail-copy" id="detailCopy">—</div><div class="rule-line"><span>Source</span><b id="detailSource">—</b></div></article>
+      <article class="card side-card"><div class="eyebrow summary-title">Injury summary</div><div class="summary"><div class="sum"><b id="sumModerate">0</b><span>Moderate</span></div><div class="sum"><b id="sumMild">0</b><span>Mild</span></div><div class="sum"><b id="sumCritical">0</b><span>Critical</span></div></div></article>
+      <article class="card side-card action"><div class="eyebrow">Trauma Team response</div><div class="detail-title">Need extraction?</div><div class="detail-copy">Dispatch sends the character reference, current HealthPar medical snapshot and location reference. Response state remains a separate service concern.</div><button class="dispatch" id="dispatchBtn">Request team</button></article>
+    </aside>
+  </div>
+
+  <div class="vitals" id="vitalsRow"></div>
+  <div class="source-note">Vitals are presentation telemetry. HP, wound state, Death Saves and Critical Injuries are projected from HealthPar 0.95.</div>
+</section>
+
+<section class="view" id="vitals">
+  <div class="section-head"><h2>Biomonitor</h2><p id="telemetryMode">—</p></div>
+  <div class="chart-grid" id="chartGrid"></div>
+</section>
+
+<section class="view" id="history">
+  <div class="section-head"><h2>Medical history</h2><p>Projected from meaningful HealthPar events</p></div>
+  <div class="history-list" id="historyList"></div>
+</section>
+
+<section class="view" id="emergency">
+  <div class="emergency-grid">
+    <article class="card emergency-hero"><div class="eyebrow">Emergency response</div><div class="detail-title emergency-title">EXTRACTION IN PROGRESS</div><div class="countdown" id="countdown">--:--</div><div class="eta">estimated arrival · min : sec</div><div class="route"><span class="you">YOU</span><span class="av">AV</span></div></article>
+    <div class="side-stack">
+      <article class="card status-block"><div class="eyebrow">Response unit</div><b id="unitId">Pending</b><div class="secondary" id="unitMeta">Awaiting assignment</div></article>
+      <article class="card status-block"><div class="eyebrow">Incident timeline</div><div class="timeline" id="timeline"></div></article>
+      <article class="card status-block"><div class="eyebrow">Location source</div><div class="primary" id="locationLabel">—</div><div class="secondary" id="locationSource">—</div></article>
+    </div>
+  </div>
+</section>
+</main>
+
+<nav aria-label="Primary navigation">
+  <button data-target="overview"><span class="ico">▦</span>Overview</button>
+  <button class="active" data-target="bodymap"><span class="ico">⌖</span>Body</button>
+  <button data-target="vitals"><span class="ico">♥</span>Vitals</button>
+  <button data-target="history"><span class="ico">≡</span>History</button>
+  <button class="emergency-nav" data-target="emergency"><span class="ico">✦</span>Emergency</button>
+</nav>
+</div>
+
+<aside id="healthparConsole" class="healthpar-console" hidden>
+  <div class="console-head"><div><b>HEALTHPAR 0.95</b><span id="engineRevision">rev —</span></div><button id="closeConsole" aria-label="Close">×</button></div>
+  <div class="console-state"><span id="engineHp">— HP</span><span id="engineWound">—</span><span id="engineDeathSave">DS —</span></div>
+  <div class="console-grid">
+    <label>Damage <input id="damageAmount" inputmode="numeric" type="number" min="0" value="5"></label><button data-command="damage">Apply damage</button>
+    <label>Death Save <input id="deathSaveRoll" inputmode="numeric" type="number" min="1" max="10" value="5"></label><button data-command="death-save">Record roll</button>
+    <button data-command="critical">Add test critical injury</button><button data-command="stabilise">Stabilise</button>
+    <button data-command="rest">Begin rest</button><button data-command="day">Advance one day</button>
+    <button data-command="reset" class="console-reset">Reset patient</button>
+  </div>
+  <small>Developer harness only. Omit <code>?healthpar=1</code> for the ordinary patient-facing UI.</small>
+</aside>
+<button id="consoleFab" class="console-fab" hidden>HP</button>
+<div class="toast" id="toast"></div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import './anatomy-load-wait-patch.js';
 import { handleCommand, project, toMedscanSnapshot } from '../src/medscan-095.js';
 
 const DEFAULT_PRESENTATION = Object.freeze({

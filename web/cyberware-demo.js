@@ -1,14 +1,12 @@
 import * as THREE from 'three';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { ANATOMY_SYSTEMS, resolveStructureIndex } from './anatomy-anchors.js';
 
 const ASSET_BASE = 'https://cdn.jsdelivr.net/gh/9Akshit1/RoboArm@main/CAD';
 const PARTS = [
-  { name: 'Shoulder interface', file: 'Human Arm Base.stl', length: 0.27, position: [-0.63, 0.91, 0.035] },
-  { name: 'Upper arm shell A', file: 'Human Arm First Link - Half 1.stl', length: 0.58, position: [-0.68, 0.57, 0.035] },
-  { name: 'Upper arm shell B', file: 'Human Arm First Link - Half 2.stl', length: 0.58, position: [-0.68, 0.57, 0.035] },
-  { name: 'Forearm shell A', file: 'Human Arm Second Link - Half 1.stl', length: 0.54, position: [-0.70, -0.01, 0.04] },
-  { name: 'Forearm shell B', file: 'Human Arm Second Link - Half 2.stl', length: 0.54, position: [-0.70, -0.01, 0.04] },
-  { name: 'Wrist', file: 'Wrist.stl', length: 0.16, position: [-0.70, -0.37, 0.04] },
+  { name: 'Upper arm shell', file: 'Human Arm First Link - Half 1.stl', from: 'shoulder', to: 'elbow', width: 0.16 },
+  { name: 'Forearm shell', file: 'Human Arm Second Link - Half 1.stl', from: 'elbow', to: 'wrist', width: 0.145 },
+  { name: 'Wrist housing', file: 'Wrist.stl', from: 'wrist', to: 'hand', width: 0.12 },
 ];
 
 const state = {
@@ -18,6 +16,7 @@ const state = {
   visible: false,
   loaded: 0,
   failed: 0,
+  anchors: null,
 };
 
 function addStyles() {
@@ -66,6 +65,42 @@ function makeMaterial() {
   });
 }
 
+function register(mesh, label, order = 7) {
+  mesh.userData.cyberware = true;
+  mesh.userData.cyberwareLabel = label;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.renderOrder = order;
+  state.pickMeshes.push(mesh);
+  return mesh;
+}
+
+function getArmAnchors(viewer) {
+  const skeleton = viewer.layers.get(ANATOMY_SYSTEMS.skeletal.id);
+  if (!skeleton) return null;
+
+  const humerusId = resolveStructureIndex(skeleton.names, 'right_arm', 'skeletal');
+  const forearmId = resolveStructureIndex(skeleton.names, 'right_forearm', 'skeletal');
+  if (humerusId < 0 || forearmId < 0) return null;
+
+  const upperCentre = viewer.structureCentroid(skeleton, humerusId);
+  const foreCentre = viewer.structureCentroid(skeleton, forearmId);
+  const span = foreCentre.clone().sub(upperCentre);
+
+  // The centroids are the centres of the upper- and lower-arm bones. Extrapolate
+  // from them to derive a stable shoulder / elbow / wrist chain on the exact body
+  // currently rendered rather than using screen-size-dependent guessed offsets.
+  const shoulder = upperCentre.clone().sub(span.clone().multiplyScalar(0.52));
+  const elbow = upperCentre.clone().lerp(foreCentre, 0.50);
+  const wrist = foreCentre.clone().add(span.clone().multiplyScalar(0.52));
+  const hand = wrist.clone().add(span.clone().multiplyScalar(0.30));
+
+  // Sit the cyberware very slightly toward the camera so it reads as a replacement
+  // surface without z-fighting against the registration skeleton.
+  [shoulder, elbow, wrist, hand].forEach((point) => { point.z += 0.035; });
+  return { shoulder, elbow, wrist, hand };
+}
+
 function orientAlongY(geometry) {
   geometry.computeBoundingBox();
   const size = geometry.boundingBox.getSize(new THREE.Vector3());
@@ -76,88 +111,108 @@ function orientAlongY(geometry) {
   geometry.computeBoundingBox();
 }
 
-function normalizePart(geometry, targetLength) {
+function fitGeometryToSegment(geometry, start, end, maxWidth) {
   orientAlongY(geometry);
   const size = geometry.boundingBox.getSize(new THREE.Vector3());
-  const scale = targetLength / Math.max(size.y, 0.001);
-  geometry.scale(scale, scale, scale);
+  const targetLength = start.distanceTo(end) * 0.88;
+  const lengthScale = targetLength / Math.max(size.y, 0.001);
+  const transverseScale = Math.min(
+    lengthScale,
+    maxWidth / Math.max(size.x, size.z, 0.001),
+  );
+  geometry.scale(transverseScale, lengthScale, transverseScale);
   geometry.computeBoundingSphere();
-  return geometry;
 }
 
-function meshFromGeometry(geometry, part) {
-  const mesh = new THREE.Mesh(geometry, makeMaterial());
-  mesh.position.fromArray(part.position);
-  mesh.userData.cyberware = true;
-  mesh.userData.cyberwareLabel = part.name;
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  mesh.renderOrder = 7;
+function placeAlongSegment(mesh, start, end) {
+  const direction = end.clone().sub(start);
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+}
+
+function addRod(group, start, end, radius = 0.018, label = 'Internal actuator') {
+  const direction = end.clone().sub(start);
+  const length = direction.length();
+  if (length < 0.001) return null;
+  const mesh = register(
+    new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 12), makeMaterial()),
+    label,
+    6,
+  );
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  group.add(mesh);
   return mesh;
 }
 
-function addRod(group, a, b, radius = 0.025) {
-  const start = new THREE.Vector3(...a);
-  const end = new THREE.Vector3(...b);
-  const direction = end.clone().sub(start);
-  const length = direction.length();
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 12), makeMaterial());
-  mesh.position.copy(start).add(end).multiplyScalar(0.5);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-  mesh.userData.cyberware = true;
-  mesh.userData.cyberwareLabel = 'Internal actuator';
-  mesh.renderOrder = 6;
-  group.add(mesh);
-  state.pickMeshes.push(mesh);
-}
-
-function addJoint(group, position, radius = 0.075) {
-  const joint = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, 0.017, 12, 34),
-    new THREE.MeshStandardMaterial({ color: 0xd7dad9, metalness: 0.75, roughness: 0.26, emissive: 0x350705, emissiveIntensity: 0.3 }),
+function addJoint(group, position, radius, label) {
+  const joint = register(
+    new THREE.Mesh(
+      new THREE.TorusGeometry(radius, 0.015, 12, 34),
+      new THREE.MeshStandardMaterial({
+        color: 0xd7dad9,
+        metalness: 0.75,
+        roughness: 0.26,
+        emissive: 0x350705,
+        emissiveIntensity: 0.3,
+      }),
+    ),
+    label,
+    8,
   );
-  joint.position.fromArray(position);
+  joint.position.copy(position);
   joint.rotation.x = Math.PI / 2;
-  joint.userData.cyberware = true;
-  joint.userData.cyberwareLabel = 'Articulation ring';
-  joint.renderOrder = 8;
   group.add(joint);
-  state.pickMeshes.push(joint);
+  return joint;
 }
 
-function addFallbackFramework(group) {
-  addJoint(group, [-0.63, 0.91, 0.07], 0.085);
-  addJoint(group, [-0.70, 0.27, 0.07], 0.072);
-  addJoint(group, [-0.70, -0.38, 0.07], 0.055);
-  addRod(group, [-0.65, 0.86, 0.04], [-0.69, 0.33, 0.04], 0.022);
-  addRod(group, [-0.61, 0.85, 0.09], [-0.66, 0.34, 0.09], 0.018);
-  addRod(group, [-0.69, 0.21, 0.04], [-0.70, -0.31, 0.04], 0.019);
-  addRod(group, [-0.65, 0.20, 0.09], [-0.66, -0.31, 0.09], 0.016);
+function offsetBetween(start, end, fraction, sideAmount = 0, depthAmount = 0) {
+  const direction = end.clone().sub(start).normalize();
+  const side = new THREE.Vector3(0, 0, 1).cross(direction).normalize();
+  return start.clone()
+    .lerp(end, fraction)
+    .add(side.multiplyScalar(sideAmount))
+    .add(new THREE.Vector3(0, 0, depthAmount));
+}
 
-  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.16, 0.07), makeMaterial());
-  palm.position.set(-0.70, -0.50, 0.055);
-  palm.rotation.z = -0.05;
-  palm.userData.cyberware = true;
-  palm.userData.cyberwareLabel = 'Cyberhand proxy';
+function addFramework(group, anchors) {
+  const { shoulder, elbow, wrist, hand } = anchors;
+  addJoint(group, shoulder, 0.070, 'Shoulder interface');
+  addJoint(group, elbow, 0.060, 'Elbow articulation');
+  addJoint(group, wrist, 0.047, 'Wrist articulation');
+
+  addRod(group, offsetBetween(shoulder, elbow, 0.08, -0.025), offsetBetween(shoulder, elbow, 0.92, -0.025), 0.017);
+  addRod(group, offsetBetween(shoulder, elbow, 0.08, 0.025, 0.025), offsetBetween(shoulder, elbow, 0.92, 0.025, 0.025), 0.014);
+  addRod(group, offsetBetween(elbow, wrist, 0.08, -0.022), offsetBetween(elbow, wrist, 0.92, -0.022), 0.015);
+  addRod(group, offsetBetween(elbow, wrist, 0.08, 0.022, 0.022), offsetBetween(elbow, wrist, 0.92, 0.022, 0.022), 0.012);
+
+  const direction = hand.clone().sub(wrist).normalize();
+  const side = new THREE.Vector3(0, 0, 1).cross(direction).normalize();
+  const palm = register(new THREE.Mesh(new THREE.BoxGeometry(0.13, wrist.distanceTo(hand) * 0.72, 0.055), makeMaterial()), 'Cyberhand proxy');
+  placeAlongSegment(palm, wrist, hand);
   group.add(palm);
-  state.pickMeshes.push(palm);
 
-  const fingerXs = [-0.76, -0.72, -0.68, -0.64];
-  fingerXs.forEach((x, index) => {
-    const length = 0.13 - index * 0.007;
-    addRod(group, [x, -0.57, 0.055], [x + 0.005, -0.57 - length, 0.055], 0.012);
+  const fingerBase = hand.clone().add(direction.clone().multiplyScalar(-0.01));
+  [-0.045, -0.015, 0.015, 0.045].forEach((offset, index) => {
+    const base = fingerBase.clone().add(side.clone().multiplyScalar(offset));
+    const tip = base.clone().add(direction.clone().multiplyScalar(0.11 - index * 0.006));
+    addRod(group, base, tip, 0.009, 'Articulated finger');
   });
-  addRod(group, [-0.77, -0.51, 0.055], [-0.84, -0.60, 0.055], 0.014);
+  const thumbBase = wrist.clone().lerp(hand, 0.70).add(side.clone().multiplyScalar(-0.07));
+  const thumbTip = thumbBase.clone().add(direction.clone().multiplyScalar(0.075)).add(side.clone().multiplyScalar(-0.035));
+  addRod(group, thumbBase, thumbTip, 0.010, 'Articulated thumb');
 }
 
-async function loadPart(loader, group, part) {
+async function loadPart(loader, group, part, anchors) {
   const url = `${ASSET_BASE}/${encodeURIComponent(part.file).replaceAll('%2F', '/')}`;
   try {
     const geometry = await loader.loadAsync(url);
-    normalizePart(geometry, part.length);
-    const mesh = meshFromGeometry(geometry, part);
+    const start = anchors[part.from];
+    const end = anchors[part.to];
+    fitGeometryToSegment(geometry, start, end, part.width);
+    const mesh = register(new THREE.Mesh(geometry, makeMaterial()), part.name);
+    placeAlongSegment(mesh, start, end);
     group.add(mesh);
-    state.pickMeshes.push(mesh);
     state.loaded += 1;
     updateTag();
   } catch (error) {
@@ -172,46 +227,54 @@ function updateTag() {
   if (!tag) return;
   const total = PARTS.length;
   const suffix = state.loaded + state.failed < total
-    ? `loading ${state.loaded}/${total}`
+    ? `fitting ${state.loaded}/${total}`
     : state.failed
-      ? `${state.loaded}/${total} model parts · proxy fallback active`
-      : `${state.loaded}/${total} model parts loaded`;
+      ? `${state.loaded}/${total} shells · framework fallback active`
+      : `${state.loaded}/${total} shells fitted to anatomy`;
   tag.innerHTML = `<b>CYBERWARE MODEL TEST</b><br>${suffix}`;
 }
 
+function ensureTag() {
+  const stage = document.querySelector('.anatomy-stage');
+  if (!stage || stage.querySelector('.cyberware-demo-tag')) return;
+  const tag = document.createElement('div');
+  tag.className = 'cyberware-demo-tag';
+  stage.appendChild(tag);
+  updateTag();
+}
+
 function buildCyberware(viewer) {
+  if (state.group) return true;
+  const anchors = getArmAnchors(viewer);
+  if (!anchors) return false;
+  state.anchors = anchors;
+
   const group = new THREE.Group();
   group.name = 'medscan:cyberware-demo';
   group.visible = false;
   viewer.scene.add(group);
   state.group = group;
 
-  addFallbackFramework(group);
-
+  addFramework(group, anchors);
   const loader = new STLLoader();
-  PARTS.forEach((part) => loadPart(loader, group, part));
-
-  const stage = document.querySelector('.anatomy-stage');
-  if (stage && !stage.querySelector('.cyberware-demo-tag')) {
-    const tag = document.createElement('div');
-    tag.className = 'cyberware-demo-tag';
-    stage.appendChild(tag);
-    updateTag();
-  }
+  PARTS.forEach((part) => loadPart(loader, group, part, anchors));
+  ensureTag();
+  return true;
 }
 
-function showCyberware() {
+async function showCyberware() {
   const viewer = state.viewer;
-  if (!viewer || !state.group) return;
+  if (!viewer) return;
+
+  await viewer.selectMode('skeletal');
+  if (!buildCyberware(viewer)) return;
+
   state.visible = true;
   state.group.visible = true;
-
-  viewer.selectMode('skeletal').then(() => {
-    viewer.layers.forEach((layer) => {
-      if (!layer.mesh.visible) return;
-      layer.mesh.material.opacity = 0.11;
-      layer.mesh.material.depthWrite = false;
-    });
+  viewer.layers.forEach((layer) => {
+    if (!layer.mesh.visible) return;
+    layer.mesh.material.opacity = 0.11;
+    layer.mesh.material.depthWrite = false;
   });
 
   document.querySelectorAll('.anatomy-mode').forEach((button) => {
@@ -245,13 +308,12 @@ function selectCyberarm() {
   };
   if (detail.severity) detail.severity.textContent = '● Cyberware';
   if (detail.title) detail.title.textContent = 'RIGHT CYBERARM';
-  if (detail.copy) detail.copy.textContent = 'Replacement-limb model test. Bright mechanical geometry occupies the arm while the biological scan is reduced to a registration ghost. Tap the arm to reselect it.';
+  if (detail.copy) detail.copy.textContent = 'Replacement-limb fit test. The mechanical assembly is anchored directly to the rendered right-arm anatomy rather than to guessed screen coordinates.';
   if (detail.source) detail.source.textContent = 'MODEL TEST · 9AKSHIT1 ROBOARM · MIT';
   if (detail.chipTitle) detail.chipTitle.textContent = 'RIGHT CYBERARM';
   if (detail.chipMeta) detail.chipMeta.textContent = 'replacement assembly · nominal';
 
-  if (!state.group) return;
-  state.group.traverse((object) => {
+  state.group?.traverse((object) => {
     if (!object.isMesh || !object.material) return;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     materials.forEach((material) => {
@@ -274,20 +336,15 @@ function selectCyberarm() {
 function bindUi(viewer) {
   document.querySelectorAll('.anatomy-mode').forEach((button) => {
     button.addEventListener('click', () => {
-      if (button.dataset.anatomyMode === 'cyberware') {
-        window.setTimeout(showCyberware, 0);
-      } else {
-        hideCyberware();
-      }
+      if (button.dataset.anatomyMode === 'cyberware') window.setTimeout(showCyberware, 0);
+      else hideCyberware();
     });
   });
 
-  const canvas = viewer.renderer.domElement;
-  canvas.addEventListener('pointerup', () => {
+  viewer.renderer.domElement.addEventListener('pointerup', () => {
     if (!state.visible) return;
     viewer.raycaster.setFromCamera(viewer.pointer, viewer.camera);
-    const hits = viewer.raycaster.intersectObjects(state.pickMeshes, false);
-    if (hits.length) selectCyberarm();
+    if (viewer.raycaster.intersectObjects(state.pickMeshes, false).length) selectCyberarm();
   });
 }
 
@@ -295,7 +352,7 @@ function init(viewer) {
   if (!viewer || state.viewer) return;
   state.viewer = viewer;
   addStyles();
-  buildCyberware(viewer);
+  ensureTag();
   bindUi(viewer);
 }
 

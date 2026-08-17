@@ -1,5 +1,5 @@
 export const ANATOMY_SYSTEMS = Object.freeze({
-  skeletal: { id: 'iskelet', label: 'SKELETAL', color: 0xe6dcc8, count: 277 },
+  skeletal: { id: 'iskelet', label: 'STRUCTURAL', color: 0xe6dcc8, count: 277 },
   internal: { id: 'ic-organlar', label: 'INTERNAL', color: 0xc76557, count: 120 },
   vascular: { id: 'dolasim', label: 'VASCULAR', color: 0xd44840, count: 676 },
   neural: { id: 'sinir', label: 'NEURAL', color: 0xe2b83a, count: 582 },

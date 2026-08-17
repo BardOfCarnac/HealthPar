@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { MedscanAnatomyViewer } from './anatomy-viewer.js';
 import { ANATOMY_SYSTEMS } from './anatomy-anchors.js';
 
@@ -10,6 +11,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const PUBLIC_MODES = new Set(['skeletal', 'vascular', 'neural']);
 const SKELETON_ID = ANATOMY_SYSTEMS.skeletal.id;
+const BODY_SHELL_URL = 'https://cdn.jsdelivr.net/gh/UMRAM-Bilkent/supine-human-model@728f23ab5eb9d6cb2c8fb39acb3440bd81db0d3e/assets/human_posed.glb';
 
 let viewer = null;
 let pendingSnapshot = null;
@@ -24,6 +26,7 @@ let focusTarget = null;
 let focusDistanceCurrent = 5.4;
 let focusDistanceTarget = 5.4;
 let resetFocusButton = null;
+let scanShell = null;
 
 function selectFindingInExistingUI(finding) {
   const zone = finding?.zone;
@@ -135,6 +138,59 @@ function installFocusUI() {
   stage.appendChild(resetFocusButton);
 }
 
+function setShellOpacity() {
+  if (!scanShell || !viewer) return;
+  const opacity = viewer.activeMode === 'skeletal' ? 0.065 : 0.085;
+  scanShell.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    child.material.opacity = opacity;
+    child.material.needsUpdate = true;
+  });
+}
+
+async function loadScanShell() {
+  if (!viewer || scanShell) return;
+  try {
+    const gltf = await viewer.loader.loadAsync(BODY_SHELL_URL);
+    const shell = gltf.scene;
+    shell.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(shell);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    if (size.y < 0.001) return;
+
+    const targetHeight = viewer.bodyHeight || 3.45;
+    const scale = targetHeight / size.y;
+    shell.scale.setScalar(scale);
+    shell.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+
+    shell.traverse((child) => {
+      if (!child.isMesh) return;
+      child.material?.dispose?.();
+      child.material = new THREE.MeshStandardMaterial({
+        color: 0x7f8b86,
+        transparent: true,
+        opacity: 0.075,
+        roughness: 1,
+        metalness: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      child.renderOrder = 0;
+      child.frustumCulled = false;
+    });
+
+    scanShell = shell;
+    viewer.scene.add(scanShell);
+    setShellOpacity();
+  } catch (error) {
+    // The outer body is an optional visual layer. Anatomy remains usable if
+    // the CC0 shell cannot be fetched.
+    console.warn('Medscan scan shell unavailable', error);
+  }
+}
+
 function tuneViewer() {
   if (!viewer) return;
 
@@ -142,11 +198,20 @@ function tuneViewer() {
   // remains available over the canvas; zoom is driven by selecting anatomy.
   viewer.controls.enabled = false;
   viewer.renderer.domElement.style.touchAction = 'pan-y';
+  viewer.renderer.toneMappingExposure = 0.92;
 
   const basePaintLayer = viewer.paintLayer.bind(viewer);
   viewer.paintLayer = (layer) => {
-    if (layer.systemId === SKELETON_ID) layer.baseColor.set(0x929691);
+    if (layer.systemId === SKELETON_ID) layer.baseColor.set(0x7d8580);
     basePaintLayer(layer);
+    layer.mesh.material.roughness = 1;
+    layer.mesh.material.metalness = 0;
+    if (layer.systemId !== SKELETON_ID) {
+      layer.mesh.material.emissive.copy(layer.baseColor).multiplyScalar(0.06);
+      layer.mesh.material.emissiveIntensity = 1;
+    } else {
+      layer.mesh.material.emissive.set(0x000000);
+    }
   };
 
   // The skeleton is always a restrained registration frame. Even in structural
@@ -159,16 +224,17 @@ function tuneViewer() {
       layer.mesh.visible = isSkeleton || isActive;
 
       if (isSkeleton) {
-        layer.mesh.material.opacity = viewer.activeMode === 'skeletal' ? 0.30 : 0.11;
+        layer.mesh.material.opacity = viewer.activeMode === 'skeletal' ? 0.24 : 0.085;
         layer.mesh.material.depthWrite = false;
         layer.mesh.renderOrder = 1;
       } else {
-        layer.mesh.material.opacity = isActive ? 0.94 : 0;
-        layer.mesh.material.depthWrite = isActive;
+        layer.mesh.material.opacity = isActive ? 0.78 : 0;
+        layer.mesh.material.depthWrite = false;
         layer.mesh.renderOrder = isActive ? 2 : 0;
       }
       layer.mesh.material.transparent = true;
     });
+    setShellOpacity();
   };
 
   viewer.view = 'front';
@@ -193,6 +259,7 @@ function tuneViewer() {
   installFocusPicking();
   installFocusUI();
   setupScrollTilt();
+  loadScanShell();
 }
 
 function setMode(mode) {

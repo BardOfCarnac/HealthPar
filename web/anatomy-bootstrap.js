@@ -16,12 +16,22 @@ let pendingSnapshot = null;
 let tiltTarget = 0;
 let tiltCurrent = 0;
 let tiltFrame = 0;
+let fullDistance = 5.4;
+let focusScale = 1;
+let focusActive = false;
+let focusCurrent = null;
+let focusTarget = null;
+let focusDistanceCurrent = 5.4;
+let focusDistanceTarget = 5.4;
+let resetFocusButton = null;
 
 function selectFindingInExistingUI(finding) {
   const zone = finding?.zone;
-  if (!zone) return;
-  const hiddenZone = document.querySelector(`.zone[data-zone="${CSS.escape(zone)}"]`);
-  hiddenZone?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  if (zone) {
+    const hiddenZone = document.querySelector(`.zone[data-zone="${CSS.escape(zone)}"]`);
+    hiddenZone?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  }
+  focusFinding(finding);
 }
 
 function renderStructureDetail(structure) {
@@ -31,6 +41,7 @@ function renderStructureDetail(structure) {
   $('#detailSource').textContent = `${structure.system.toUpperCase()} · STRUCTURE ${String(structure.structureId).padStart(3, '0')}`;
   $('#chipTitle').textContent = [structure.side, structure.name].filter(Boolean).join(' ');
   $('#chipMeta').textContent = `${structure.system.toUpperCase()} anatomy`;
+  focusStructure(structure);
 }
 
 function applySnapshot(snapshot) {
@@ -39,12 +50,96 @@ function applySnapshot(snapshot) {
   viewer.setFindings(snapshot?.bodyMap?.findings ?? []);
 }
 
+function calculateFullDistance() {
+  if (!viewer) return 5.4;
+  const height = viewer.bodyHeight || 3.45;
+  const aspect = Math.max(viewer.camera.aspect, 0.42);
+  const halfWidth = height * 0.30;
+  const verticalFov = Math.PI * viewer.camera.fov / 180;
+  const fit = halfWidth / (Math.tan(verticalFov / 2) * aspect);
+  return Math.max(height * 1.48, fit * 1.05);
+}
+
+function updateFocusButton() {
+  resetFocusButton?.classList.toggle('visible', focusActive);
+  resetFocusButton?.toggleAttribute('hidden', !focusActive);
+}
+
+function setFocus(point, scale = 0.43) {
+  if (!viewer || !point) return;
+  focusActive = true;
+  focusScale = Math.max(0.34, Math.min(0.58, scale));
+  focusTarget.copy(point);
+  focusDistanceTarget = Math.max(1.55, fullDistance * focusScale);
+  updateFocusButton();
+}
+
+function resetFocus() {
+  if (!viewer) return;
+  focusActive = false;
+  focusScale = 1;
+  focusTarget.set(0, 0, 0);
+  focusDistanceTarget = fullDistance;
+  viewer.selected = null;
+  viewer.paintAll();
+  updateFocusButton();
+}
+
+function focusStructure(structure) {
+  if (!viewer || !structure) return;
+  const layer = viewer.layers.get(structure.systemId);
+  if (!layer) return;
+  const point = viewer.structureCentroid(layer, structure.structureId);
+  setFocus(point, 0.43);
+}
+
+function focusFinding(finding) {
+  if (!viewer || !finding) return;
+  const marker = viewer.markerMeshes.get(finding.id);
+  if (marker) {
+    setFocus(marker.position, finding.zone?.includes('eye') || finding.zone === 'head' ? 0.35 : 0.43);
+    return;
+  }
+  const anchor = viewer.resolveFindingAnchor(finding);
+  if (anchor) setFocus(anchor.position, 0.43);
+}
+
+function installFocusPicking() {
+  if (!viewer) return;
+  const originalPick = viewer.pick.bind(viewer);
+  viewer.pick = () => {
+    viewer.raycaster.setFromCamera(viewer.pointer, viewer.camera);
+    const markerHit = viewer.raycaster.intersectObjects([...viewer.markerMeshes.values()], false)[0];
+    const structureHit = markerHit ? null : viewer.raycastStructure();
+    if (!markerHit && !structureHit) {
+      resetFocus();
+      return;
+    }
+    originalPick();
+  };
+}
+
+function installFocusUI() {
+  const stage = $('.anatomy-stage');
+  if (!stage || stage.querySelector('.anatomy-reset-focus')) return;
+  resetFocusButton = document.createElement('button');
+  resetFocusButton.type = 'button';
+  resetFocusButton.className = 'anatomy-reset-focus';
+  resetFocusButton.textContent = 'FULL BODY';
+  resetFocusButton.hidden = true;
+  resetFocusButton.setAttribute('aria-label', 'Return to full body scan');
+  resetFocusButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    resetFocus();
+  });
+  stage.appendChild(resetFocusButton);
+}
+
 function tuneViewer() {
   if (!viewer) return;
 
   // Medscan is a scan instrument, not a free-orbit anatomy atlas. Page scrolling
-  // remains available over the canvas; deliberate region zoom will be added as
-  // a separate interaction rather than preserving generic orbit/dolly controls.
+  // remains available over the canvas; zoom is driven by selecting anatomy.
   viewer.controls.enabled = false;
   viewer.renderer.domElement.style.touchAction = 'pan-y';
 
@@ -55,7 +150,7 @@ function tuneViewer() {
   };
 
   // The skeleton is always a restrained registration frame. Even in structural
-  // mode it never returns to the bright ivory "anatomy model" treatment.
+  // mode it never returns to the bright ivory anatomy-atlas treatment.
   viewer.applyVisibility = () => {
     const activeSystem = ANATOMY_SYSTEMS[viewer.activeMode]?.id;
     viewer.layers.forEach((layer) => {
@@ -78,6 +173,25 @@ function tuneViewer() {
 
   viewer.view = 'front';
   viewer.setView('front', false);
+  fullDistance = calculateFullDistance();
+  focusCurrent = viewer.controls.target.clone();
+  focusTarget = viewer.controls.target.clone();
+  focusDistanceCurrent = fullDistance;
+  focusDistanceTarget = fullDistance;
+
+  // Preserve the current focus when the phone rotates or the viewport changes.
+  viewer.resize = () => {
+    const rect = viewer.container.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    viewer.camera.aspect = rect.width / rect.height;
+    viewer.camera.updateProjectionMatrix();
+    viewer.renderer.setSize(rect.width, rect.height, false);
+    fullDistance = calculateFullDistance();
+    focusDistanceTarget = focusActive ? Math.max(1.55, fullDistance * focusScale) : fullDistance;
+  };
+
+  installFocusPicking();
+  installFocusUI();
   setupScrollTilt();
 }
 
@@ -105,16 +219,16 @@ function updateTiltTarget() {
 }
 
 function animateScrollTilt() {
-  if (!viewer) return;
+  if (!viewer || !focusCurrent || !focusTarget) return;
   tiltCurrent += (tiltTarget - tiltCurrent) * 0.075;
+  focusCurrent.lerp(focusTarget, 0.085);
+  focusDistanceCurrent += (focusDistanceTarget - focusDistanceCurrent) * 0.085;
 
-  const target = viewer.controls.target;
-  const dx = viewer.camera.position.x - target.x;
-  const dz = viewer.camera.position.z - target.z;
-  const radius = Math.max(0.001, Math.hypot(dx, dz));
-  viewer.camera.position.x = target.x + Math.sin(tiltCurrent) * radius;
-  viewer.camera.position.z = target.z + Math.cos(tiltCurrent) * radius;
-  viewer.camera.lookAt(target);
+  viewer.controls.target.copy(focusCurrent);
+  viewer.camera.position.x = focusCurrent.x + Math.sin(tiltCurrent) * focusDistanceCurrent;
+  viewer.camera.position.y = focusCurrent.y + 0.015;
+  viewer.camera.position.z = focusCurrent.z + Math.cos(tiltCurrent) * focusDistanceCurrent;
+  viewer.camera.lookAt(focusCurrent);
 
   tiltFrame = requestAnimationFrame(animateScrollTilt);
 }

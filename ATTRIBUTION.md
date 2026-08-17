@@ -20,7 +20,7 @@ https://lifesciencedb.jp/bp3d/
 **Z-Anatomy — The libre 3D atlas of anatomy**  
 Licensed under **CC BY-SA 4.0**.  
 https://www.z-anatomy.com/  
-https://github.com/Z-Anatomy/Models-of-human-anatomy
+https://github.com/LluisV/Z-Anatomy
 
 ## Browser conversion
 
@@ -36,6 +36,22 @@ attribution and ShareAlike licensing.
 The application code that positions HealthPar findings against semantic anatomy
 structures is separate from the anatomy data itself; no claim is made here that
 CC BY-SA applies to unrelated HealthPar or Medscan application code.
+
+## Outer scan body
+
+The optional translucent exterior now loads Z-Anatomy's own
+`Resources/Models/FBX/Regions of human body100.fbx`, pinned to Z-Anatomy commit
+`6c7f9016bd5899ac8edafd31b9900c151df42ed6`.
+
+This exterior comes from the same Z-Anatomy / BodyParts3D anatomical source as
+the internal systems. Medscan fits only its uniform export scale and centre to
+the already-loaded skeleton; it does not independently reshape the body. A
+registration sanity check suppresses the exterior entirely if its resulting
+proportions are implausible, so a failed shell never replaces the underlying
+anatomy view.
+
+The Z-Anatomy exterior remains subject to the applicable **CC BY-SA 4.0**
+attribution and ShareAlike terms.
 
 ## three.js
 

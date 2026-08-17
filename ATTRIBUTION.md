@@ -20,7 +20,7 @@ https://lifesciencedb.jp/bp3d/
 **Z-Anatomy — The libre 3D atlas of anatomy**  
 Licensed under **CC BY-SA 4.0**.  
 https://www.z-anatomy.com/  
-https://github.com/Z-Anatomy/Models-of-human-anatomy
+https://github.com/LluisV/Z-Anatomy
 
 ## Browser conversion
 
@@ -39,14 +39,19 @@ CC BY-SA applies to unrelated HealthPar or Medscan application code.
 
 ## Outer scan body
 
-The optional translucent outer-body scan layer loads `human_posed.glb` from
-[`UMRAM-Bilkent/supine-human-model`](https://github.com/UMRAM-Bilkent/supine-human-model),
-pinned to commit `728f23ab5eb9d6cb2c8fb39acb3440bd81db0d3e`.
+The optional translucent exterior now loads Z-Anatomy's own
+`Resources/Models/FBX/Regions of human body100.fbx`, pinned to Z-Anatomy commit
+`6c7f9016bd5899ac8edafd31b9900c151df42ed6`.
 
-That prepared model is released under **CC0 1.0** and is derived from a CC0
-Quaternius character. Attribution is not legally required; we retain this note as
-courtesy provenance. The shell is presentation-only and is not used as the
-source of anatomical structure names or HealthPar body-region mappings.
+This exterior comes from the same Z-Anatomy / BodyParts3D anatomical source as
+the internal systems. Medscan fits only its uniform export scale and centre to
+the already-loaded skeleton; it does not independently reshape the body. A
+registration sanity check suppresses the exterior entirely if its resulting
+proportions are implausible, so a failed shell never replaces the underlying
+anatomy view.
+
+The Z-Anatomy exterior remains subject to the applicable **CC BY-SA 4.0**
+attribution and ShareAlike terms.
 
 ## three.js
 

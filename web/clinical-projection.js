@@ -103,6 +103,7 @@ export function rulesFindings(state) {
           side: injury.side ?? null,
           zone,
           preferredSystem: preferredSystemForZone(zone),
+          layer: 'clinical',
         },
         summary: injury.state === 'quick_fixed'
           ? 'Quick Fixed. The canonical Critical Injury remains in HealthPar until definitive treatment resolves it.'
@@ -129,7 +130,8 @@ export function cyberwareFindings(state) {
           bodyRegion: item.bodyRegion ?? null,
           side: null,
           zone,
-          preferredSystem: 'cyberware',
+          preferredSystem: preferredSystemForZone(zone),
+          layer: 'cyberware',
         },
         summary: item.state === 'operational'
           ? 'Canonical installed cyberware projected from HealthPar.'

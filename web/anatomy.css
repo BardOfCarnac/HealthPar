@@ -1,0 +1,55 @@
+.anatomy-head{justify-content:space-between;align-items:center}
+.anatomy-head>div:first-child{display:flex;align-items:baseline;gap:8px}
+.anatomy-meta{display:flex;align-items:center;gap:8px;font:800 8px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em;color:var(--muted)}
+.anatomy-meta b{display:grid;place-items:center;min-width:34px;padding:6px 7px;border:1px solid var(--line);border-radius:9px;color:var(--ink);background:rgba(255,255,255,.7)}
+
+/* The scan chamber now reads as clinical glass rather than a black 3D viewport. */
+.anatomy-stage{background:linear-gradient(180deg,#eef0ed 0%,#e2e5e1 56%,#d8dcd8 100%);isolation:isolate}
+.anatomy-viewport{position:absolute;inset:0;z-index:2}
+.anatomy-viewport canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
+.anatomy-grid{position:absolute;inset:0;z-index:0;opacity:.48;background-image:linear-gradient(rgba(38,43,42,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(38,43,42,.055) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to bottom,transparent,black 10%,black 90%,transparent)}
+.anatomy-scanline{position:absolute;left:7%;right:7%;height:1px;top:18%;z-index:5;background:linear-gradient(90deg,transparent,rgba(239,23,26,.7),rgba(216,169,0,.58),transparent);box-shadow:0 0 13px rgba(239,23,26,.24);pointer-events:none;animation:anatomySweep 5.8s ease-in-out infinite}
+@keyframes anatomySweep{0%,100%{transform:translateY(0);opacity:.22}50%{transform:translateY(360px);opacity:.65}}
+
+.anatomy-loading{position:absolute;inset:0;z-index:12;display:grid;place-items:center;align-content:center;gap:12px;background:rgba(232,235,231,.88);color:rgba(32,36,35,.7);font-size:9px;font-weight:850;letter-spacing:.14em;transition:opacity .18s,visibility .18s;pointer-events:none}
+.anatomy-loading.hidden{opacity:0;visibility:hidden}
+.anatomy-spinner{width:35px;height:35px;border-radius:50%;border:1px solid rgba(28,31,30,.13);border-top-color:var(--red);border-right-color:var(--yellow);animation:anatomySpin .8s linear infinite}
+@keyframes anatomySpin{to{transform:rotate(360deg)}}
+
+.anatomy-tooltip{position:fixed;z-index:90;pointer-events:none;max-width:240px;padding:7px 9px;border:1px solid rgba(255,255,255,.16);background:rgba(12,13,14,.92);color:#fff;font-size:10px;font-weight:750;opacity:0;transform:translate(12px,12px);transition:opacity .08s}
+.body-hit-proxy{display:none!important}
+
+/* Internal-organs and alternate body views are intentionally removed from the
+   patient-facing scanner. The hidden semantic anchors remain available to code. */
+.anatomy-mode[data-anatomy-mode="internal"],
+.anatomy-stage .view-toggle{display:none!important}
+
+.anatomy-mode-bar{position:absolute;z-index:14;left:50%;bottom:9px;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);width:min(360px,68%);border:1px solid rgba(36,41,39,.16);border-radius:12px;overflow:hidden;background:rgba(247,248,244,.88);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(45,49,47,.08)}
+.anatomy-mode{border:0;border-right:1px solid rgba(36,41,39,.11);background:transparent;color:rgba(30,34,33,.58);padding:9px 6px;font-size:7px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.anatomy-mode:last-child{border-right:0}
+.anatomy-mode.active{background:rgba(255,255,255,.68);color:var(--ink);box-shadow:inset 0 3px var(--red)}
+
+.anatomy-stage .map-legend{bottom:52px;z-index:15;background:rgba(255,254,250,.9)}
+.anatomy-stage .selected-chip{bottom:58px;z-index:15}
+.source-note a{color:inherit}
+
+@media(min-width:800px){
+  .anatomy-stage .selected-chip{display:none}
+  .anatomy-mode-bar{width:350px}
+  .anatomy-stage .map-legend{bottom:54px}
+}
+
+@media(max-width:560px){
+  .anatomy-head{align-items:flex-start}
+  .anatomy-head>div:first-child{display:block}
+  .anatomy-meta{font-size:7px}
+  .anatomy-mode-bar{width:calc(100% - 18px);bottom:8px}
+  .anatomy-mode{padding:9px 3px;font-size:6.5px}
+  .anatomy-stage .map-legend{display:none}
+  .anatomy-stage .selected-chip{bottom:57px;width:min(235px,72%)}
+  @keyframes anatomySweep{0%,100%{transform:translateY(0);opacity:.22}50%{transform:translateY(300px);opacity:.65}}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .anatomy-scanline,.anatomy-spinner{animation:none!important}
+}

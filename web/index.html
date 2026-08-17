@@ -5,13 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#fbf8ef">
 <title>MedScan Live — HealthPar connected</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <div class="app">
 <header class="masthead">
   <div class="mark" aria-hidden="true"><i class="m1"></i><i class="m2"></i><i class="m3"></i></div>
-  <div class="brand"><div class="brand-name">MEDSCAN <span>LIVE</span></div><div class="brand-sub">Trauma Team International · connected medical service</div></div>
+  <div class="brand"><div class="brand-name">MEDSCAN <span>LIVE</span></div><div class="brand-sub">Trauma Team International · connected medical service · Radian systems integration</div></div>
   <div class="head-status"><div class="pill coverage"><b id="headPlan">—</b> coverage</div><div class="pill live">biomonitor live</div></div>
 </header>
 
@@ -34,29 +43,35 @@
 
   <div class="body-layout">
     <article class="card body-card">
-      <div class="section-head"><h2>Body map</h2><p>Tap a marked zone</p></div>
-      <div class="scan-stage">
-        <svg class="body-svg" viewBox="0 0 260 520" aria-label="Medical body map">
+      <div class="section-head anatomy-head"><div><h2>Body map</h2><p>Aligned anatomical scan · tap anatomy or a marker</p></div><div class="anatomy-meta"><span id="anatomyModeTitle">SKELETAL</span><b id="anatomyStructureCount">277</b></div></div>
+      <div class="scan-stage anatomy-stage">
+        <div id="anatomyViewport" class="anatomy-viewport" aria-label="Interactive anatomical scan"></div>
+        <div class="anatomy-grid" aria-hidden="true"></div>
+        <div class="anatomy-scanline" aria-hidden="true"></div>
+        <div id="anatomyLoading" class="anatomy-loading"><span class="anatomy-spinner"></span><span id="anatomyLoadingText">INITIALISING SKELETAL SCAN…</span></div>
+        <div id="anatomyTooltip" class="anatomy-tooltip" role="status" aria-live="polite"></div>
+
+        <svg class="body-svg body-hit-proxy" viewBox="0 0 260 520" aria-hidden="true">
           <g id="frontBody">
-            <ellipse class="body-base" cx="130" cy="50" rx="31" ry="39"/>
-            <path class="body-base" d="M104 86 C83 95 70 117 69 153 L73 228 55 331 74 338 95 249 104 219 104 298 90 474 119 480 129 330 140 480 170 474 156 298 156 219 165 249 186 338 205 331 187 228 191 153 C190 117 177 95 156 86 Z"/>
-            <path class="body-detail" d="M130 89v232M91 127c20 14 59 14 78 0M103 183c15 11 39 11 54 0M105 253c11 7 39 7 51 0M119 480v-147M140 480V333"/>
             <ellipse class="zone red" data-zone="head" cx="151" cy="39" rx="11" ry="9"/>
+            <ellipse class="zone yellow" data-zone="right_eye" cx="141" cy="43" rx="7" ry="5"/>
             <ellipse class="zone red" data-zone="left_shoulder" cx="92" cy="111" rx="18" ry="17"/>
             <ellipse class="zone amber" data-zone="right_forearm" cx="178" cy="227" rx="13" ry="26"/>
             <ellipse class="zone red" data-zone="left_thigh" cx="112" cy="344" rx="17" ry="43"/>
             <ellipse class="zone yellow" data-zone="right_knee" cx="150" cy="402" rx="13" ry="18"/>
           </g>
-          <g id="backBody" hidden>
-            <ellipse class="body-base" cx="130" cy="50" rx="31" ry="39"/>
-            <path class="body-base" d="M104 86 C83 95 70 117 69 153 L73 228 55 331 74 338 95 249 104 219 104 298 90 474 119 480 129 330 140 480 170 474 156 298 156 219 165 249 186 338 205 331 187 228 191 153 C190 117 177 95 156 86 Z"/>
-            <path class="body-detail" d="M130 89v232M88 126c24-13 59-13 84 0M104 189c18-11 34-11 52 0M118 480l11-147M141 480l-11-147"/>
-            <ellipse class="zone yellow" data-zone="thoracic_back" cx="132" cy="168" rx="24" ry="34"/>
-          </g>
+          <g id="backBody" hidden><ellipse class="zone yellow" data-zone="thoracic_back" cx="132" cy="168" rx="24" ry="34"/></g>
         </svg>
+
         <div class="selected-chip"><strong id="chipTitle">—</strong><span id="chipMeta">—</span></div>
-        <div class="map-legend"><span><i class="dot red-dot"></i>critical / rules-linked</span><span><i class="dot amber-dot"></i>sensor</span></div>
+        <div class="map-legend"><span><i class="dot red-dot"></i>rules-linked trauma</span><span><i class="dot amber-dot"></i>sensor / cyberware</span></div>
         <div class="view-toggle"><button class="active" data-bodyview="front">Front</button><button data-bodyview="back">Back</button></div>
+        <div class="anatomy-mode-bar" aria-label="Anatomy scan modes">
+          <button class="anatomy-mode active" data-anatomy-mode="skeletal" aria-pressed="true">Skeleton</button>
+          <button class="anatomy-mode" data-anatomy-mode="internal" aria-pressed="false">Internal</button>
+          <button class="anatomy-mode" data-anatomy-mode="vascular" aria-pressed="false">Vascular</button>
+          <button class="anatomy-mode" data-anatomy-mode="neural" aria-pressed="false">Neural</button>
+        </div>
       </div>
     </article>
 
@@ -68,7 +83,7 @@
   </div>
 
   <div class="vitals" id="vitalsRow"></div>
-  <div class="source-note">Vitals are presentation telemetry. HP, wound state, Death Saves and Critical Injuries are projected from HealthPar 0.95.</div>
+  <div class="source-note">Anatomy data: BodyParts3D / Z-Anatomy-derived browser assets, CC BY-SA 4.0. HP, wound state, Death Saves, Critical Injuries and cyberware state are projected from HealthPar 0.95.</div>
 </section>
 
 <section class="view" id="vitals">
@@ -110,7 +125,8 @@
     <label>Death Save <input id="deathSaveRoll" inputmode="numeric" type="number" min="1" max="10" value="5"></label><button data-command="death-save">Record roll</button>
     <button data-command="critical">Add test critical injury</button><button data-command="stabilise">Stabilise</button>
     <button data-command="treat">Treat critical injury</button><button data-command="rest">Begin rest</button>
-    <button data-command="day">Advance one day</button><button data-command="reset" class="console-reset">Reset patient</button>
+    <button data-command="day">Advance one day</button><button id="installCyberwareBtn">Install eye cyberware</button>
+    <button data-command="reset" class="console-reset">Reset patient</button>
   </div>
   <small>Developer harness only. Omit <code>?healthpar=1</code> for the ordinary patient-facing UI.</small>
 </aside>
@@ -118,6 +134,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" src="./app.js"></script>
+<script type="module" src="./anatomy-bootstrap.js"></script>
 <script type="module">
   window.addEventListener('medscan:update', (event) => {
     if (event.detail) window.MedScanBridge?.load(event.detail);

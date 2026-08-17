@@ -15,6 +15,26 @@
 }
 </script>
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./anatomy.css?v=20260817-2124">
+<script>
+  // anatomy-bootstrap historically injects a second, unversioned anatomy.css.
+  // Remove that duplicate so a stale cached stylesheet cannot override the
+  // versioned stylesheet above.
+  (() => {
+    const removeUnversionedAnatomyCss = () => {
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+        try {
+          const url = new URL(link.href, window.location.href);
+          if (url.pathname.endsWith('/anatomy.css') && !url.searchParams.has('v')) link.remove();
+        } catch (_) {}
+      });
+    };
+    const observer = new MutationObserver(removeUnversionedAnatomyCss);
+    observer.observe(document.head, { childList: true });
+    removeUnversionedAnatomyCss();
+    window.addEventListener('load', () => setTimeout(() => observer.disconnect(), 3000), { once: true });
+  })();
+</script>
 </head>
 <body>
 <div class="app">
@@ -48,6 +68,7 @@
         <div id="anatomyViewport" class="anatomy-viewport" aria-label="Interactive anatomical scan"></div>
         <div class="anatomy-grid" aria-hidden="true"></div>
         <div class="anatomy-scanline" aria-hidden="true"></div>
+        <div id="shellStatusBadge" role="status" aria-live="polite" style="position:absolute;z-index:30;top:10px;left:10px;max-width:78%;padding:6px 8px;border:1px solid rgba(38,43,42,.22);border-radius:999px;background:rgba(252,252,248,.96);color:#20242b;font:900 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;box-shadow:0 4px 14px rgba(44,48,46,.08);opacity:1;animation:none;transform:none">SHELL: WAITING</div>
         <div id="anatomyLoading" class="anatomy-loading"><span class="anatomy-spinner"></span><span id="anatomyLoadingText">INITIALISING SKELETAL SCAN…</span></div>
         <div id="anatomyTooltip" class="anatomy-tooltip" role="status" aria-live="polite"></div>
 
@@ -134,7 +155,20 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" src="./app.js"></script>
-<script type="module" src="./anatomy-bootstrap.js"></script>
+<script type="module" src="./anatomy-bootstrap.js?v=20260817-2124"></script>
+<script>
+  (() => {
+    const badge = document.getElementById('shellStatusBadge');
+    if (!badge) return;
+    const renderShellStatus = () => {
+      const status = document.documentElement.dataset.medscanShell || 'waiting';
+      badge.textContent = `SHELL: ${status.replaceAll('-', ' ')}`;
+    };
+    const observer = new MutationObserver(renderShellStatus);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-medscan-shell'] });
+    renderShellStatus();
+  })();
+</script>
 <script type="module">
   window.addEventListener('medscan:update', (event) => {
     if (event.detail) window.MedScanBridge?.load(event.detail);

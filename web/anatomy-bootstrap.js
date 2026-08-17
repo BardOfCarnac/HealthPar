@@ -143,6 +143,8 @@ function init() {
     onFindingSelected: selectFindingInExistingUI,
     onStructureSelected: renderStructureDetail,
   });
+  window.MedScanAnatomyViewer = viewer;
+  window.dispatchEvent(new CustomEvent('medscan:anatomy-ready', { detail: viewer }));
 
   tuneViewer();
 

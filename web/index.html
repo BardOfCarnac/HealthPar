@@ -67,7 +67,8 @@
         <div class="map-legend"><span><i class="dot red-dot"></i>rules-linked trauma</span><span><i class="dot amber-dot"></i>sensor / cyberware</span></div>
         <div class="view-toggle"><button class="active" data-bodyview="front">Front</button><button data-bodyview="back">Back</button></div>
         <div class="anatomy-mode-bar" aria-label="Anatomy scan modes">
-          <button class="anatomy-mode active" data-anatomy-mode="skeletal" aria-pressed="true">Skeleton</button>
+          <button class="anatomy-mode active" data-anatomy-mode="skeletal" aria-pressed="true">Structural</button>
+          <button class="anatomy-mode" data-anatomy-mode="cyberware" aria-pressed="false">Cyberware</button>
           <button class="anatomy-mode" data-anatomy-mode="internal" aria-pressed="false">Internal</button>
           <button class="anatomy-mode" data-anatomy-mode="vascular" aria-pressed="false">Vascular</button>
           <button class="anatomy-mode" data-anatomy-mode="neural" aria-pressed="false">Neural</button>
@@ -135,6 +136,7 @@
 
 <script type="module" src="./app.js"></script>
 <script type="module" src="./anatomy-bootstrap.js"></script>
+<script type="module" src="./cyberware-demo.js"></script>
 <script type="module">
   window.addEventListener('medscan:update', (event) => {
     if (event.detail) window.MedScanBridge?.load(event.detail);

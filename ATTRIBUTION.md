@@ -37,6 +37,18 @@ The application code that positions HealthPar findings against semantic anatomy
 structures is separate from the anatomy data itself; no claim is made here that
 CC BY-SA applies to unrelated HealthPar or Medscan application code.
 
+## Cyberware demo geometry
+
+The cyberware model-fit prototype loads selected STL components from
+[`9Akshit1/RoboArm`](https://github.com/9Akshit1/RoboArm), copyright © 2025
+9Akshit1, under the **MIT License**. The demo currently loads those components
+remotely via jsDelivr and adapts their scale/orientation at runtime; the original
+model files are not redistributed by this repository.
+
+The applicable MIT copyright and permission notice remain available in the
+upstream repository. If these assets are later vendored or substantially copied
+into HealthPar/Medscan, retain that notice with the distributed asset material.
+
 ## three.js
 
 The browser prototype uses three.js under the MIT License via jsDelivr.

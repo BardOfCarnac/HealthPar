@@ -28,6 +28,17 @@ let focusDistanceCurrent = 5.4;
 let focusDistanceTarget = 5.4;
 let resetFocusButton = null;
 let scanShell = null;
+let scanShellStatus = 'idle';
+
+function setShellStatus(status, detail = '') {
+  scanShellStatus = status;
+  document.documentElement.dataset.medscanShell = status;
+  window.MedscanAnatomyDebug = {
+    ...(window.MedscanAnatomyDebug ?? {}),
+    shell: { status, detail, url: BODY_SHELL_URL },
+  };
+  console.info(`[Medscan shell] ${status}`, detail);
+}
 
 function selectFindingInExistingUI(finding) {
   const zone = finding?.zone;
@@ -141,7 +152,9 @@ function installFocusUI() {
 
 function setShellOpacity() {
   if (!scanShell || !viewer) return;
-  const opacity = viewer.activeMode === 'skeletal' ? 0.045 : 0.065;
+  // Keep this deliberately visible while we validate registration. Once the
+  // silhouette is proven to wrap the anatomy correctly we can tune it down.
+  const opacity = viewer.activeMode === 'skeletal' ? 0.14 : 0.09;
   scanShell.traverse((child) => {
     if (!child.isMesh || !child.material) return;
     child.material.opacity = opacity;
@@ -181,24 +194,33 @@ function fitShellToSkeleton(shell, skeletonLayer) {
   if (widthRatio < 0.85 || widthRatio > 1.9 || depthRatio < 0.75 || depthRatio > 2.4) {
     throw new Error(`Z-Anatomy shell registration rejected (${widthRatio.toFixed(2)}w, ${depthRatio.toFixed(2)}d)`);
   }
+
+  return { widthRatio, depthRatio, scale };
 }
 
 async function loadScanShell() {
-  if (!viewer || scanShell) return;
+  if (!viewer || scanShell || scanShellStatus === 'loading') return;
+  setShellStatus('loading');
+
   try {
     const skeletonLayer = await viewer.loadSystem(SKELETON_ID);
-    if (!skeletonLayer) return;
+    if (!skeletonLayer) {
+      setShellStatus('skeleton-unavailable');
+      return;
+    }
 
     const shell = await new FBXLoader().loadAsync(BODY_SHELL_URL);
-    fitShellToSkeleton(shell, skeletonLayer);
+    const registration = fitShellToSkeleton(shell, skeletonLayer);
+    let meshCount = 0;
 
     shell.traverse((child) => {
       if (!child.isMesh) return;
+      meshCount += 1;
       child.material?.dispose?.();
       child.material = new THREE.MeshBasicMaterial({
-        color: 0x9aa5a0,
+        color: 0x8d9994,
         transparent: true,
-        opacity: 0.055,
+        opacity: 0.14,
         depthWrite: false,
         depthTest: true,
         side: THREE.DoubleSide,
@@ -207,12 +229,21 @@ async function loadScanShell() {
       child.frustumCulled = false;
     });
 
+    if (!meshCount) throw new Error('Z-Anatomy shell contains no mesh geometry');
+
     scanShell = shell;
     viewer.scene.add(scanShell);
     setShellOpacity();
+    setShellStatus(
+      'loaded',
+      `${meshCount} meshes; ${registration.widthRatio.toFixed(2)}w; ${registration.depthRatio.toFixed(2)}d; scale ${registration.scale.toFixed(4)}`,
+    );
   } catch (error) {
     scanShell?.removeFromParent?.();
     scanShell = null;
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes('registration rejected') ? 'registration-rejected' : 'load-error';
+    setShellStatus(status, message);
     // Exterior tissue is presentation-only. If registration fails, show the
     // clean scan rather than a misleading misaligned silhouette.
     console.warn('Medscan Z-Anatomy scan shell unavailable', error);

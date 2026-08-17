@@ -130,6 +130,9 @@ function init() {
   const container = $('#anatomyViewport');
   if (!container) return;
 
+  const structuralButton = $('[data-anatomy-mode="skeletal"]');
+  if (structuralButton) structuralButton.textContent = 'Structural';
+
   viewer = new MedscanAnatomyViewer({
     container,
     tooltip: $('#anatomyTooltip'),

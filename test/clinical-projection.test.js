@@ -52,6 +52,7 @@ test('Critical Injuries carry semantic anatomy and treatment state into presenta
   assert.equal(finding.ruleRef, 'inj_leg');
   assert.equal(finding.zone, 'left_leg');
   assert.equal(finding.anatomy.preferredSystem, 'skeletal');
+  assert.equal(finding.anatomy.layer, 'clinical');
   assert.equal(finding.treatmentState, 'quick_fixed');
   assert.equal(finding.rulesLinked, true);
   assert.equal(finding.presentationOnly, true);
@@ -69,7 +70,8 @@ test('cyberware is canonical but its anatomy marker remains presentation-only', 
   const finding = projected.bodyMap.findings[0];
   assert.equal(finding.cyberwareRef, 'eye_r');
   assert.equal(finding.zone, 'right_eye');
-  assert.equal(finding.anatomy.preferredSystem, 'cyberware');
+  assert.equal(finding.anatomy.preferredSystem, 'internal');
+  assert.equal(finding.anatomy.layer, 'cyberware');
   assert.equal(finding.rulesLinked, true);
   assert.equal(finding.presentationOnly, true);
 });

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { MedscanAnatomyViewer } from './anatomy-viewer.js';
 import { ANATOMY_SYSTEMS } from './anatomy-anchors.js';
 
@@ -11,7 +12,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const PUBLIC_MODES = new Set(['skeletal', 'vascular', 'neural']);
 const SKELETON_ID = ANATOMY_SYSTEMS.skeletal.id;
-const BODY_SHELL_URL = 'https://cdn.jsdelivr.net/gh/UMRAM-Bilkent/supine-human-model@728f23ab5eb9d6cb2c8fb39acb3440bd81db0d3e/assets/human_posed.glb';
+const BODY_SHELL_URL = 'https://cdn.jsdelivr.net/gh/LluisV/Z-Anatomy@6c7f9016bd5899ac8edafd31b9900c151df42ed6/Resources/Models/FBX/Regions%20of%20human%20body100.fbx';
 
 let viewer = null;
 let pendingSnapshot = null;
@@ -140,7 +141,7 @@ function installFocusUI() {
 
 function setShellOpacity() {
   if (!scanShell || !viewer) return;
-  const opacity = viewer.activeMode === 'skeletal' ? 0.065 : 0.085;
+  const opacity = viewer.activeMode === 'skeletal' ? 0.045 : 0.065;
   scanShell.traverse((child) => {
     if (!child.isMesh || !child.material) return;
     child.material.opacity = opacity;
@@ -148,33 +149,58 @@ function setShellOpacity() {
   });
 }
 
+function fitShellToSkeleton(shell, skeletonLayer) {
+  shell.updateMatrixWorld(true);
+  skeletonLayer.mesh.updateMatrixWorld(true);
+
+  const shellBox = new THREE.Box3().setFromObject(shell);
+  const skeletonBox = new THREE.Box3().setFromObject(skeletonLayer.mesh);
+  const shellSize = shellBox.getSize(new THREE.Vector3());
+  const skeletonSize = skeletonBox.getSize(new THREE.Vector3());
+  const skeletonCenter = skeletonBox.getCenter(new THREE.Vector3());
+
+  if (shellSize.y < 0.001 || skeletonSize.y < 0.001) throw new Error('Invalid scan-shell bounds');
+
+  // The FBX and GLB originate in the same Z-Anatomy pose. Their exporters use
+  // different unit conventions, so only a uniform height scale + centre match
+  // is applied. We deliberately do not reshape individual axes.
+  const scale = skeletonSize.y / shellSize.y;
+  shell.scale.multiplyScalar(scale);
+  shell.updateMatrixWorld(true);
+
+  const scaledCenter = new THREE.Box3().setFromObject(shell).getCenter(new THREE.Vector3());
+  shell.position.add(skeletonCenter.sub(scaledCenter));
+  shell.updateMatrixWorld(true);
+
+  // Catch a wrong-axis or wrong-file failure instead of quietly displaying a
+  // second ghost person. A true skin shell should remain close to skeleton
+  // proportions after the shared-height fit.
+  const fittedSize = new THREE.Box3().setFromObject(shell).getSize(new THREE.Vector3());
+  const widthRatio = fittedSize.x / Math.max(skeletonSize.x, 0.001);
+  const depthRatio = fittedSize.z / Math.max(skeletonSize.z, 0.001);
+  if (widthRatio < 0.85 || widthRatio > 1.9 || depthRatio < 0.75 || depthRatio > 2.4) {
+    throw new Error(`Z-Anatomy shell registration rejected (${widthRatio.toFixed(2)}w, ${depthRatio.toFixed(2)}d)`);
+  }
+}
+
 async function loadScanShell() {
   if (!viewer || scanShell) return;
   try {
-    const gltf = await viewer.loader.loadAsync(BODY_SHELL_URL);
-    const shell = gltf.scene;
-    shell.updateMatrixWorld(true);
+    const skeletonLayer = await viewer.loadSystem(SKELETON_ID);
+    if (!skeletonLayer) return;
 
-    const box = new THREE.Box3().setFromObject(shell);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    if (size.y < 0.001) return;
-
-    const targetHeight = viewer.bodyHeight || 3.45;
-    const scale = targetHeight / size.y;
-    shell.scale.setScalar(scale);
-    shell.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+    const shell = await new FBXLoader().loadAsync(BODY_SHELL_URL);
+    fitShellToSkeleton(shell, skeletonLayer);
 
     shell.traverse((child) => {
       if (!child.isMesh) return;
       child.material?.dispose?.();
-      child.material = new THREE.MeshStandardMaterial({
-        color: 0x7f8b86,
+      child.material = new THREE.MeshBasicMaterial({
+        color: 0x9aa5a0,
         transparent: true,
-        opacity: 0.075,
-        roughness: 1,
-        metalness: 0,
+        opacity: 0.055,
         depthWrite: false,
+        depthTest: true,
         side: THREE.DoubleSide,
       });
       child.renderOrder = 0;
@@ -185,9 +211,11 @@ async function loadScanShell() {
     viewer.scene.add(scanShell);
     setShellOpacity();
   } catch (error) {
-    // The outer body is an optional visual layer. Anatomy remains usable if
-    // the CC0 shell cannot be fetched.
-    console.warn('Medscan scan shell unavailable', error);
+    scanShell?.removeFromParent?.();
+    scanShell = null;
+    // Exterior tissue is presentation-only. If registration fails, show the
+    // clean scan rather than a misleading misaligned silhouette.
+    console.warn('Medscan Z-Anatomy scan shell unavailable', error);
   }
 }
 
@@ -214,8 +242,6 @@ function tuneViewer() {
     }
   };
 
-  // The skeleton is always a restrained registration frame. Even in structural
-  // mode it never returns to the bright ivory anatomy-atlas treatment.
   viewer.applyVisibility = () => {
     const activeSystem = ANATOMY_SYSTEMS[viewer.activeMode]?.id;
     viewer.layers.forEach((layer) => {
@@ -245,7 +271,6 @@ function tuneViewer() {
   focusDistanceCurrent = fullDistance;
   focusDistanceTarget = fullDistance;
 
-  // Preserve the current focus when the phone rotates or the viewport changes.
   viewer.resize = () => {
     const rect = viewer.container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -282,7 +307,7 @@ function updateTiltTarget() {
   const scanCentre = rect.top + rect.height / 2;
   const travel = Math.max(window.innerHeight * 0.9, rect.height * 0.55, 1);
   const progress = Math.max(-1, Math.min(1, (viewportCentre - scanCentre) / travel));
-  tiltTarget = progress * (Math.PI / 45); // ±4° maximum.
+  tiltTarget = progress * (Math.PI / 45);
 }
 
 function animateScrollTilt() {

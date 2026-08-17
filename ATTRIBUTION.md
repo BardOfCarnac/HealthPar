@@ -37,6 +37,17 @@ The application code that positions HealthPar findings against semantic anatomy
 structures is separate from the anatomy data itself; no claim is made here that
 CC BY-SA applies to unrelated HealthPar or Medscan application code.
 
+## Outer scan body
+
+The optional translucent outer-body scan layer loads `human_posed.glb` from
+[`UMRAM-Bilkent/supine-human-model`](https://github.com/UMRAM-Bilkent/supine-human-model),
+pinned to commit `728f23ab5eb9d6cb2c8fb39acb3440bd81db0d3e`.
+
+That prepared model is released under **CC0 1.0** and is derived from a CC0
+Quaternius character. Attribution is not legally required; we retain this note as
+courtesy provenance. The shell is presentation-only and is not used as the
+source of anatomical structure names or HealthPar body-region mappings.
+
 ## three.js
 
 The browser prototype uses three.js under the MIT License via jsDelivr.

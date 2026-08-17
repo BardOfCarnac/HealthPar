@@ -11,6 +11,14 @@
 .anatomy-scanline{position:absolute;left:7%;right:7%;height:1px;top:18%;z-index:5;background:linear-gradient(90deg,transparent,rgba(239,23,26,.7),rgba(216,169,0,.58),transparent);box-shadow:0 0 13px rgba(239,23,26,.24);pointer-events:none;animation:anatomySweep 5.8s ease-in-out infinite}
 @keyframes anatomySweep{0%,100%{transform:translateY(0);opacity:.22}50%{transform:translateY(360px);opacity:.65}}
 
+/* Temporary field diagnostic while validating the Z-Anatomy exterior on mobile. */
+html[data-medscan-shell] .anatomy-stage::after{content:"SHELL: " attr(data-medscan-shell);position:absolute;z-index:18;top:10px;left:10px;max-width:72%;padding:6px 8px;border:1px solid rgba(38,43,42,.2);border-radius:999px;background:rgba(252,252,248,.92);color:var(--ink);font:900 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;box-shadow:0 4px 14px rgba(44,48,46,.08)}
+html[data-medscan-shell="loading"] .anatomy-stage::after{content:"SHELL: LOADING"}
+html[data-medscan-shell="loaded"] .anatomy-stage::after{content:"SHELL: LOADED"}
+html[data-medscan-shell="registration-rejected"] .anatomy-stage::after{content:"SHELL: REGISTRATION REJECTED"}
+html[data-medscan-shell="load-error"] .anatomy-stage::after{content:"SHELL: LOAD ERROR"}
+html[data-medscan-shell="skeleton-unavailable"] .anatomy-stage::after{content:"SHELL: SKELETON UNAVAILABLE"}
+
 .anatomy-loading{position:absolute;inset:0;z-index:12;display:grid;place-items:center;align-content:center;gap:12px;background:rgba(232,235,231,.88);color:rgba(32,36,35,.7);font-size:9px;font-weight:850;letter-spacing:.14em;transition:opacity .18s,visibility .18s;pointer-events:none}
 .anatomy-loading.hidden{opacity:0;visibility:hidden}
 .anatomy-spinner{width:35px;height:35px;border-radius:50%;border:1px solid rgba(28,31,30,.13);border-top-color:var(--red);border-right-color:var(--yellow);animation:anatomySpin .8s linear infinite}
@@ -54,6 +62,7 @@
   .anatomy-stage .map-legend{display:none}
   .anatomy-stage .selected-chip{bottom:57px;width:min(235px,72%)}
   .anatomy-reset-focus{top:9px;right:9px;padding:7px 9px;font-size:6.5px}
+  html[data-medscan-shell] .anatomy-stage::after{top:9px;left:9px;font-size:6.5px}
   @keyframes anatomySweep{0%,100%{transform:translateY(0);opacity:.22}50%{transform:translateY(300px);opacity:.65}}
 }
 

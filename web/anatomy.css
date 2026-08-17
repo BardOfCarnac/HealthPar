@@ -3,7 +3,7 @@
 .anatomy-meta{display:flex;align-items:center;gap:8px;font:800 8px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em;color:var(--muted)}
 .anatomy-meta b{display:grid;place-items:center;min-width:34px;padding:6px 7px;border:1px solid var(--line);border-radius:9px;color:var(--ink);background:rgba(255,255,255,.7)}
 
-/* The scan chamber now reads as clinical glass rather than a black 3D viewport. */
+/* The scan chamber reads as clinical glass rather than a black 3D viewport. */
 .anatomy-stage{background:linear-gradient(180deg,#eef0ed 0%,#e2e5e1 56%,#d8dcd8 100%);isolation:isolate}
 .anatomy-viewport{position:absolute;inset:0;z-index:2}
 .anatomy-viewport canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
@@ -29,6 +29,12 @@
 .anatomy-mode:last-child{border-right:0}
 .anatomy-mode.active{background:rgba(255,255,255,.68);color:var(--ink);box-shadow:inset 0 3px var(--red)}
 
+/* Focus zoom is selection-driven. The only explicit camera control is a return
+   to the registered full-body frame, which appears only while focused. */
+.anatomy-reset-focus{position:absolute;z-index:16;top:12px;right:12px;border:1px solid rgba(38,43,42,.2);border-radius:999px;padding:7px 10px;background:rgba(252,252,248,.88);color:var(--ink);font:900 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.11em;box-shadow:0 5px 16px rgba(44,48,46,.08);backdrop-filter:blur(8px);opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease;cursor:pointer}
+.anatomy-reset-focus.visible{opacity:1;transform:translateY(0)}
+.anatomy-reset-focus:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
 .anatomy-stage .map-legend{bottom:52px;z-index:15;background:rgba(255,254,250,.9)}
 .anatomy-stage .selected-chip{bottom:58px;z-index:15}
 .source-note a{color:inherit}
@@ -47,9 +53,11 @@
   .anatomy-mode{padding:9px 3px;font-size:6.5px}
   .anatomy-stage .map-legend{display:none}
   .anatomy-stage .selected-chip{bottom:57px;width:min(235px,72%)}
+  .anatomy-reset-focus{top:9px;right:9px;padding:7px 9px;font-size:6.5px}
   @keyframes anatomySweep{0%,100%{transform:translateY(0);opacity:.22}50%{transform:translateY(300px);opacity:.65}}
 }
 
 @media(prefers-reduced-motion:reduce){
   .anatomy-scanline,.anatomy-spinner{animation:none!important}
+  .anatomy-reset-focus{transition:none}
 }

@@ -252,8 +252,7 @@ function selectCyberarm() {
 
   if (!state.group) return;
   state.group.traverse((object) => {
-    if (!object.isMesh?.valueOf?.() && !object.isMesh) return;
-    if (!object.material) return;
+    if (!object.isMesh || !object.material) return;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     materials.forEach((material) => {
       if ('emissive' in material) material.emissive.set(0x5a0b08);

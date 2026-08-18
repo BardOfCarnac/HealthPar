@@ -1,0 +1,66 @@
+name: Verify Medscan Z-Anatomy skin
+
+on:
+  push:
+    branches:
+      - agent/medscan-prebuilt-zanatomy-skin
+    paths:
+      - .github/workflows/build-medscan-skin.yml
+      - tools/export-medscan-skin.py
+      - tools/patch-medscan-skin-loader.py
+      - web/anatomy-bootstrap.js
+      - web/assets/z-anatomy-skin.glb
+      - web/assets/z-anatomy-skin.sha256
+      - ATTRIBUTION.md
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-medscan-skin.yml
+      - tools/export-medscan-skin.py
+      - tools/patch-medscan-skin-loader.py
+      - web/anatomy-bootstrap.js
+      - web/assets/z-anatomy-skin.glb
+      - web/assets/z-anatomy-skin.sha256
+      - ATTRIBUTION.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-skin:
+    runs-on: ubuntu-24.04
+    env:
+      EXPECTED_SKIN_SHA256: 34034912ff049ff20db86d97ebbdfbebde71bf9b6dcac793a959f7a7b0595f2a
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Verify committed Z-Anatomy derivative
+        run: |
+          test -s web/assets/z-anatomy-skin.glb
+          test -s web/assets/z-anatomy-skin.sha256
+          sha256sum --check web/assets/z-anatomy-skin.sha256
+          ACTUAL_SHA256="$(sha256sum web/assets/z-anatomy-skin.glb | cut -d' ' -f1)"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SKIN_SHA256"
+          printf 'Verified Medscan skin: %s\n' "$ACTUAL_SHA256"
+
+      - name: Verify Medscan uses the local GLB
+        run: |
+          node --check web/anatomy-bootstrap.js
+          grep -F "const BODY_SHELL_URL = './assets/z-anatomy-skin.glb';" web/anatomy-bootstrap.js
+          if grep -Fq 'FBXLoader' web/anatomy-bootstrap.js; then
+            echo 'Runtime FBXLoader reference must not be present' >&2
+            exit 1
+          fi
+
+      - name: Verify exporter and patch helper syntax
+        run: |
+          python3 -m py_compile tools/export-medscan-skin.py tools/patch-medscan-skin-loader.py
+
+      - name: Verify loader patch is idempotent
+        run: |
+          cp web/anatomy-bootstrap.js /tmp/anatomy-bootstrap.js
+          python3 tools/patch-medscan-skin-loader.py /tmp/anatomy-bootstrap.js
+          cmp web/anatomy-bootstrap.js /tmp/anatomy-bootstrap.js

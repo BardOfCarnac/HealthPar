@@ -7,6 +7,12 @@ on:
     paths:
       - .github/workflows/build-medscan-skin.yml
       - tools/export-medscan-skin.py
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-medscan-skin.yml
+      - tools/export-medscan-skin.py
   workflow_dispatch:
 
 permissions:
@@ -16,10 +22,11 @@ jobs:
   build-skin:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out branch
+      - name: Check out source branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Install Blender
         run: |
@@ -47,6 +54,8 @@ jobs:
           ls -lh web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
 
       - name: Commit generated skin asset
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -56,4 +65,4 @@ jobs:
             exit 0
           fi
           git commit -m 'Add prebuilt Z-Anatomy skin GLB'
-          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin HEAD:${TARGET_BRANCH}

@@ -1,4 +1,5 @@
 import { handleCommand, project, toMedscanSnapshot } from '../src/medscan-095.js';
+import { projectClinicalPresentation } from './clinical-projection.js';
 
 const DEFAULT_PRESENTATION = Object.freeze({
   identityRef: 'sinlog:demo-character',
@@ -16,18 +17,6 @@ const DEFAULT_PRESENTATION = Object.freeze({
     { id: 'sensor_arm', zone: 'right_forearm', title: 'Right forearm abrasion', severity: 'mild', source: 'sensor', summary: 'Surface tissue damage. This remains presentation telemetry unless linked to a rules event.' },
   ],
   response: { state: 'idle', unitId: null, etaSeconds: null, distanceKm: null, timeline: [] },
-});
-
-const REGION_TO_ZONE = Object.freeze({
-  head: 'head', skull: 'head', face: 'head',
-  right_eye: 'right_eye', left_eye: 'left_eye', right_orbit: 'right_eye', left_orbit: 'left_eye',
-  left_shoulder: 'left_shoulder', right_shoulder: 'right_shoulder',
-  left_arm: 'left_arm', right_arm: 'right_arm',
-  left_forearm: 'left_forearm', right_forearm: 'right_forearm',
-  left_thigh: 'left_thigh', right_thigh: 'right_thigh',
-  left_knee: 'left_knee', right_knee: 'right_knee',
-  left_leg: 'left_leg', right_leg: 'right_leg',
-  chest: 'chest', torso: 'torso', thorax: 'chest', thoracic_back: 'thoracic_back',
 });
 
 function clone(value) { return structuredClone(value); }
@@ -56,46 +45,16 @@ function eventHistory(events) {
   });
 }
 
-function rulesFindings(state) {
-  return state.criticalInjuries
-    .filter((injury) => injury.state !== 'treated' && injury.state !== 'resolved')
-    .map((injury) => ({
-      id: `rule_${injury.injuryId}`,
-      zone: REGION_TO_ZONE[injury.bodyRegion] ?? 'thoracic_back',
-      title: injury.label,
-      severity: 'critical',
-      source: 'rules-linked',
-      ruleRef: injury.injuryId,
-      summary: injury.state === 'quick_fixed'
-        ? 'Quick Fixed. The canonical Critical Injury remains in HealthPar until definitive treatment resolves it.'
-        : 'Canonical Critical Injury projected from HealthPar. The anatomy viewer is presentation only.',
-    }));
-}
-
-function cyberwareFindings(state) {
-  return state.cyberware
-    .filter((item) => item.state !== 'removed')
-    .map((item) => ({
-      id: `cyberware_${item.cyberwareId}`,
-      zone: REGION_TO_ZONE[item.bodyRegion] ?? 'torso',
-      title: item.label,
-      severity: item.state === 'operational' ? 'stable' : 'moderate',
-      source: 'cyberware',
-      cyberwareRef: item.cyberwareId,
-      summary: item.state === 'operational'
-        ? 'Canonical installed cyberware projected from HealthPar.'
-        : `Canonical cyberware state: ${cap(item.state)}.`,
-    }));
-}
-
 export function mergePresentation(snapshot, state, events, presentation = DEFAULT_PRESENTATION) {
   const next = clone(snapshot);
+  const clinical = projectClinicalPresentation(state, presentation);
   next.subject.identityRef = presentation.identityRef ?? null;
-  next.biomonitor = clone(presentation.biomonitor);
+  next.clinical = clinical.clinical;
+  next.biomonitor = clinical.biomonitor;
   next.coverage = clone(presentation.coverage);
   next.location = clone(presentation.location);
-  next.telemetry = clone(presentation.telemetry);
-  next.bodyMap = { findings: [...clone(presentation.sensorFindings ?? []), ...rulesFindings(state), ...cyberwareFindings(state)] };
+  next.telemetry = clinical.telemetry;
+  next.bodyMap = clinical.bodyMap;
   next.response = clone(presentation.response);
   next.history = eventHistory(events);
   return next;

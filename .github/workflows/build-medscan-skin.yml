@@ -1,0 +1,59 @@
+name: Build Medscan Z-Anatomy skin
+
+on:
+  push:
+    branches:
+      - agent/medscan-prebuilt-zanatomy-skin
+    paths:
+      - .github/workflows/build-medscan-skin.yml
+      - tools/export-medscan-skin.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-skin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version | head -n 2
+
+      - name: Download pinned Z-Anatomy exterior
+        run: |
+          mkdir -p /tmp/medscan-skin web/assets
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/LluisV/Z-Anatomy/6c7f9016bd5899ac8edafd31b9900c151df42ed6/Resources/Models/FBX/Regions%20of%20human%20body100.fbx' \
+            --output /tmp/medscan-skin/regions.fbx
+          test -s /tmp/medscan-skin/regions.fbx
+          ls -lh /tmp/medscan-skin/regions.fbx
+
+      - name: Export browser GLB
+        run: |
+          blender --background \
+            --python tools/export-medscan-skin.py -- \
+            /tmp/medscan-skin/regions.fbx \
+            web/assets/z-anatomy-skin.glb
+          test -s web/assets/z-anatomy-skin.glb
+          sha256sum web/assets/z-anatomy-skin.glb | tee web/assets/z-anatomy-skin.sha256
+          ls -lh web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
+
+      - name: Commit generated skin asset
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
+          if git diff --cached --quiet; then
+            echo 'Generated skin asset is already current.'
+            exit 0
+          fi
+          git commit -m 'Add prebuilt Z-Anatomy skin GLB'
+          git push origin HEAD:${GITHUB_REF_NAME}

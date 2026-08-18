@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { MedscanAnatomyViewer } from './anatomy-viewer.js';
 import { ANATOMY_SYSTEMS } from './anatomy-anchors.js';
 
@@ -12,7 +11,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const PUBLIC_MODES = new Set(['skeletal', 'vascular', 'neural']);
 const SKELETON_ID = ANATOMY_SYSTEMS.skeletal.id;
-const BODY_SHELL_URL = 'https://cdn.jsdelivr.net/gh/LluisV/Z-Anatomy@6c7f9016bd5899ac8edafd31b9900c151df42ed6/Resources/Models/FBX/Regions%20of%20human%20body100.fbx';
+const BODY_SHELL_URL = './assets/z-anatomy-skin.glb';
 
 let viewer = null;
 let pendingSnapshot = null;
@@ -198,18 +197,38 @@ function fitShellToSkeleton(shell, skeletonLayer) {
   return { widthRatio, depthRatio, scale };
 }
 
+async function getSkeletonLayerForShell(timeoutMs = 15000) {
+  if (!viewer) return null;
+  const existing = viewer.layers.get(SKELETON_ID);
+  if (existing) return existing;
+
+  // The viewer constructor starts the skeletal load immediately. loadSystem()
+  // returns null if that same system is already in flight, so wait for the
+  // existing request instead of treating null as a missing skeleton.
+  const direct = await viewer.loadSystem(SKELETON_ID);
+  if (direct) return direct;
+
+  const started = performance.now();
+  while (viewer.loading.has(SKELETON_ID) && performance.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return viewer.layers.get(SKELETON_ID) ?? null;
+}
+
 async function loadScanShell() {
   if (!viewer || scanShell || scanShellStatus === 'loading') return;
   setShellStatus('loading');
 
   try {
-    const skeletonLayer = await viewer.loadSystem(SKELETON_ID);
+    const skeletonLayer = await getSkeletonLayerForShell();
     if (!skeletonLayer) {
-      setShellStatus('skeleton-unavailable');
+      setShellStatus('skeleton-unavailable', 'Timed out waiting for the skeletal layer');
       return;
     }
 
-    const shell = await new FBXLoader().loadAsync(BODY_SHELL_URL);
+    const gltf = await viewer.loader.loadAsync(BODY_SHELL_URL);
+    const shell = gltf.scene;
+    shell.traverse((child) => { child.visible = true; });
     const registration = fitShellToSkeleton(shell, skeletonLayer);
     let meshCount = 0;
 

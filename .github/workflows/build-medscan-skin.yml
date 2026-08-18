@@ -1,4 +1,4 @@
-name: Build Medscan Z-Anatomy skin
+name: Verify Medscan Z-Anatomy skin
 
 on:
   push:
@@ -8,6 +8,10 @@ on:
       - .github/workflows/build-medscan-skin.yml
       - tools/export-medscan-skin.py
       - tools/patch-medscan-skin-loader.py
+      - web/anatomy-bootstrap.js
+      - web/assets/z-anatomy-skin.glb
+      - web/assets/z-anatomy-skin.sha256
+      - ATTRIBUTION.md
   pull_request:
     branches:
       - main
@@ -15,86 +19,48 @@ on:
       - .github/workflows/build-medscan-skin.yml
       - tools/export-medscan-skin.py
       - tools/patch-medscan-skin-loader.py
+      - web/anatomy-bootstrap.js
+      - web/assets/z-anatomy-skin.glb
+      - web/assets/z-anatomy-skin.sha256
+      - ATTRIBUTION.md
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-skin:
+  verify-skin:
     runs-on: ubuntu-24.04
     env:
-      BLENDER_VERSION: 4.0.2+dfsg-1ubuntu8
+      EXPECTED_SKIN_SHA256: 34034912ff049ff20db86d97ebbdfbebde71bf9b6dcac793a959f7a7b0595f2a
     steps:
-      - name: Check out source branch
+      - name: Check out source
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Install pinned Blender
+      - name: Verify committed Z-Anatomy derivative
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --allow-downgrades \
-            "blender=${BLENDER_VERSION}" \
-            "blender-data=${BLENDER_VERSION}" \
-            python3-numpy
-          blender --version | head -n 2
-          blender --version | grep -F 'Blender 4.0.2'
-
-      - name: Download pinned Z-Anatomy exterior
-        run: |
-          mkdir -p /tmp/medscan-skin web/assets
-          curl --fail --location --retry 3 \
-            'https://raw.githubusercontent.com/LluisV/Z-Anatomy/6c7f9016bd5899ac8edafd31b9900c151df42ed6/Resources/Models/FBX/Regions%20of%20human%20body100.fbx' \
-            --output /tmp/medscan-skin/regions.fbx
-          test -s /tmp/medscan-skin/regions.fbx
-          ls -lh /tmp/medscan-skin/regions.fbx
-
-      - name: Export browser GLB
-        run: |
-          rm -f web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
-          blender --background \
-            --python-exit-code 1 \
-            --python tools/export-medscan-skin.py -- \
-            /tmp/medscan-skin/regions.fbx \
-            web/assets/z-anatomy-skin.glb
           test -s web/assets/z-anatomy-skin.glb
-          sha256sum web/assets/z-anatomy-skin.glb | tee web/assets/z-anatomy-skin.sha256
-          ls -lh web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
+          test -s web/assets/z-anatomy-skin.sha256
+          sha256sum --check web/assets/z-anatomy-skin.sha256
+          ACTUAL_SHA256="$(sha256sum web/assets/z-anatomy-skin.glb | cut -d' ' -f1)"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SKIN_SHA256"
+          printf 'Verified Medscan skin: %s\n' "$ACTUAL_SHA256"
 
-      - name: Switch Medscan to local skin GLB
+      - name: Verify Medscan uses the local GLB
         run: |
-          python3 tools/patch-medscan-skin-loader.py web/anatomy-bootstrap.js
           node --check web/anatomy-bootstrap.js
-          grep -F "./assets/z-anatomy-skin.glb" web/anatomy-bootstrap.js
+          grep -F "const BODY_SHELL_URL = './assets/z-anatomy-skin.glb';" web/anatomy-bootstrap.js
           if grep -Fq 'FBXLoader' web/anatomy-bootstrap.js; then
-            echo 'FBXLoader reference remained after patch' >&2
+            echo 'Runtime FBXLoader reference must not be present' >&2
             exit 1
           fi
 
-      - name: Upload fork build result
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-        uses: actions/upload-artifact@v4
-        with:
-          name: medscan-zanatomy-skin
-          path: |
-            web/assets/z-anatomy-skin.glb
-            web/assets/z-anatomy-skin.sha256
-            web/anatomy-bootstrap.js
-
-      - name: Commit generated skin asset and loader
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+      - name: Verify exporter and patch helper syntax
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256 web/anatomy-bootstrap.js
-          if git diff --cached --quiet; then
-            echo 'Generated skin asset and loader are already current.'
-            exit 0
-          fi
-          git commit -m 'Use prebuilt Z-Anatomy skin GLB'
-          git push origin HEAD:${TARGET_BRANCH}
+          python3 -m py_compile tools/export-medscan-skin.py tools/patch-medscan-skin-loader.py
+
+      - name: Verify loader patch is idempotent
+        run: |
+          cp web/anatomy-bootstrap.js /tmp/anatomy-bootstrap.js
+          python3 tools/patch-medscan-skin-loader.py /tmp/anatomy-bootstrap.js
+          cmp web/anatomy-bootstrap.js /tmp/anatomy-bootstrap.js

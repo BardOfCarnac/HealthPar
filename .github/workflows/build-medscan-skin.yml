@@ -22,19 +22,26 @@ permissions:
 
 jobs:
   build-skin:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      BLENDER_VERSION: 4.0.2+dfsg-1ubuntu8
     steps:
       - name: Check out source branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Install Blender
+      - name: Install pinned Blender
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender python3-numpy
+          sudo apt-get install -y --allow-downgrades \
+            "blender=${BLENDER_VERSION}" \
+            "blender-data=${BLENDER_VERSION}" \
+            python3-numpy
           blender --version | head -n 2
+          blender --version | grep -F 'Blender 4.0.2'
 
       - name: Download pinned Z-Anatomy exterior
         run: |
@@ -47,7 +54,9 @@ jobs:
 
       - name: Export browser GLB
         run: |
+          rm -f web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
           blender --background \
+            --python-exit-code 1 \
             --python tools/export-medscan-skin.py -- \
             /tmp/medscan-skin/regions.fbx \
             web/assets/z-anatomy-skin.glb
@@ -65,7 +74,18 @@ jobs:
             exit 1
           fi
 
+      - name: Upload fork build result
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: medscan-zanatomy-skin
+          path: |
+            web/assets/z-anatomy-skin.glb
+            web/assets/z-anatomy-skin.sha256
+            web/anatomy-bootstrap.js
+
       - name: Commit generated skin asset and loader
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |

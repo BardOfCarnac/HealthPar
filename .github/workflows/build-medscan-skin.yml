@@ -7,12 +7,14 @@ on:
     paths:
       - .github/workflows/build-medscan-skin.yml
       - tools/export-medscan-skin.py
+      - tools/patch-medscan-skin-loader.py
   pull_request:
     branches:
       - main
     paths:
       - .github/workflows/build-medscan-skin.yml
       - tools/export-medscan-skin.py
+      - tools/patch-medscan-skin-loader.py
   workflow_dispatch:
 
 permissions:
@@ -53,16 +55,26 @@ jobs:
           sha256sum web/assets/z-anatomy-skin.glb | tee web/assets/z-anatomy-skin.sha256
           ls -lh web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
 
-      - name: Commit generated skin asset
+      - name: Switch Medscan to local skin GLB
+        run: |
+          python3 tools/patch-medscan-skin-loader.py web/anatomy-bootstrap.js
+          node --check web/anatomy-bootstrap.js
+          grep -F "./assets/z-anatomy-skin.glb" web/anatomy-bootstrap.js
+          if grep -Fq 'FBXLoader' web/anatomy-bootstrap.js; then
+            echo 'FBXLoader reference remained after patch' >&2
+            exit 1
+          fi
+
+      - name: Commit generated skin asset and loader
         env:
           TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256
+          git add web/assets/z-anatomy-skin.glb web/assets/z-anatomy-skin.sha256 web/anatomy-bootstrap.js
           if git diff --cached --quiet; then
-            echo 'Generated skin asset is already current.'
+            echo 'Generated skin asset and loader are already current.'
             exit 0
           fi
-          git commit -m 'Add prebuilt Z-Anatomy skin GLB'
+          git commit -m 'Use prebuilt Z-Anatomy skin GLB'
           git push origin HEAD:${TARGET_BRANCH}
